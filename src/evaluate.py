@@ -11,9 +11,9 @@ from src.patch import patch_with_retries
 
 ROUND_CONFIGS = {
     '0': {'variants': ['clean', 'm1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7'], 'dir': 'samples/variants', 'default_mode': 'offline', 'default_patch': 'oracle'},
-    '1': {'variants': ['clean', 'm1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7'], 'dir': 'samples/variants', 'default_mode': 'agent', 'default_patch': 'llm'},
-    '2': {'variants': ['h1', 'h2', 'h3', 'h4'], 'dir': 'samples/heldout', 'default_mode': 'agent', 'default_patch': 'llm'},
-    '3': {'variants': ['m7', 'm7', 'm7'], 'dir': 'samples/variants', 'default_mode': 'agent', 'default_patch': 'llm'},
+    '1': {'variants': ['clean', 'm1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7'], 'dir': 'samples/variants', 'default_mode': 'guided', 'default_patch': 'llm'},
+    '2': {'variants': ['h1', 'h2', 'h3', 'h4'], 'dir': 'samples/heldout', 'default_mode': 'guided', 'default_patch': 'llm'},
+    '3': {'variants': ['m7', 'm7', 'm7'], 'dir': 'samples/variants', 'default_mode': 'guided', 'default_patch': 'llm'},
 }
 
 GROUND_TRUTH = {
@@ -43,12 +43,26 @@ GROUND_TRUTH = {
 }
 
 
-def run_evaluation(round_num: str, mode: str | None = None, patch_mode: str | None = None) -> dict:
+def run_evaluation(
+    round_num: str,
+    mode: str | None = None,
+    patch_mode: str | None = None,
+    limit: int | None = None,
+    only: str | None = None,
+) -> dict:
     cfg = ROUND_CONFIGS.get(round_num, ROUND_CONFIGS['0'])
     actual_mode = mode or cfg['default_mode']
     actual_patch = patch_mode or cfg['default_patch']
     base_dir = Path(cfg['dir'])
-    variants = cfg['variants']
+    variants = list(cfg['variants'])
+
+    if only:
+        variants = [only]
+    elif limit is not None:
+        variants = variants[:limit]
+
+    cache_dir = Path('reports/llm_cache')
+    initial_cache_count = len(list(cache_dir.glob('*.json'))) if cache_dir.exists() else 0
 
     total_expected = 0
     total_detected = 0
@@ -72,7 +86,7 @@ def run_evaluation(round_num: str, mode: str | None = None, patch_mode: str | No
         if actual_mode == 'offline':
             rep = run_offline(g, project)
         else:
-            rep = run_agent(f'audit_{project}', project)
+            rep = run_agent(f'audit_{project}', project, mode=actual_mode)
 
         elapsed = time.time() - t0
         total_seconds += elapsed
@@ -131,8 +145,11 @@ def run_evaluation(round_num: str, mode: str | None = None, patch_mode: str | No
     path_acc = (total_path_ok / total_expected) if total_expected > 0 else 1.0
     num_buggy = sum(1 for v in variants if GROUND_TRUTH.get(v, []))
     patch_success_rate = (total_patch_success / num_buggy) if num_buggy > 0 else 1.0
-    mean_tools = round(total_tool_calls / num_v, 1)
-    mean_secs = round(total_seconds / num_v, 2)
+    mean_tools = round(total_tool_calls / num_v, 1) if num_v > 0 else 0
+    mean_secs = round(total_seconds / num_v, 2) if num_v > 0 else 0
+
+    final_cache_count = len(list(cache_dir.glob('*.json'))) if cache_dir.exists() else 0
+    cache_hits = max(0, final_cache_count - initial_cache_count)
 
     summary = {
         'round': round_num,
@@ -166,17 +183,20 @@ def run_evaluation(round_num: str, mode: str | None = None, patch_mode: str | No
 
     print(f'Round {round_num} Evaluation Finished:')
     print(json.dumps(summary, indent=2))
+    print(f'Disk cache items: {final_cache_count} (New entries generated: {cache_hits})')
     return summary
 
 
 def main():
     parser = argparse.ArgumentParser(description='Evaluate Graph-Audit agent and harness')
     parser.add_argument('--round', default='0', help='Round number (0, 1, 2, 3)')
-    parser.add_argument('--mode', choices=['offline', 'agent'], default=None, help='Audit mode')
+    parser.add_argument('--mode', choices=['offline', 'agent', 'guided'], default=None, help='Audit mode')
     parser.add_argument('--patch', choices=['oracle', 'llm'], default=None, help='Patch mode')
+    parser.add_argument('--limit', type=int, default=None, help='Limit number of variants to evaluate')
+    parser.add_argument('--only', type=str, default=None, help='Run only a specific variant')
     args = parser.parse_args()
 
-    run_evaluation(args.round, args.mode, args.patch)
+    run_evaluation(args.round, args.mode, args.patch, limit=args.limit, only=args.only)
 
 
 if __name__ == '__main__':

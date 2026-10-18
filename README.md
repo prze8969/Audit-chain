@@ -100,10 +100,17 @@ pip install -r requirements.txt
 solc-select install 0.8.19
 solc-select use 0.8.19
 
-# 3. Run Ground-Truth Adversarial Harness (Round 0)
-python -m src.evaluate --round 0 --mode offline --patch oracle
+# 3. Configure LLM (.env)
+# Compatible with small, free, rate-limited models (e.g. Groq, Ollama, OpenRouter)
+# Includes built-in throttling, exponential backoff retries, and disk response cache:
+cp .env.example .env
 
-# 4. Launch Interactive Web Dashboard
+# 4. Run Ground-Truth Adversarial Harness
+python -m src.evaluate --round 0 --mode offline --patch oracle
+# Or evaluate a specific variant with the autonomous guided agent:
+python -m src.evaluate --round 1 --mode guided --only m7
+
+# 5. Launch Interactive Web Dashboard
 streamlit run app.py
 ```
 

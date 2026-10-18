@@ -1,5 +1,14 @@
 .env
+.env*.local
 .venv/
 __pycache__/
 *.pyc
 reports/trace_*
+reports/llm_cache/
+reports/llm_calls.jsonl
+*.sol.tmp
+patch_tmp_*
+slither_tmp_*
+temp_source_patch.sol
+tmp_run_*.sol
+

@@ -1,0 +1,23 @@
+{
+  "project": "m1",
+  "attack_surface": 13,
+  "findings": [
+    {
+      "finding_id": "P0:Treasury.setOwner(address):Treasury.owner",
+      "klass": "P",
+      "title": "Unguarded privileged writer: setOwner allows anyone to take ownership",
+      "severity": "High",
+      "function_id": "Treasury.setOwner(address)",
+      "reachable": true,
+      "path": [
+        "Treasury.setOwner(address)"
+      ],
+      "sink": "Treasury.owner",
+      "evidence_cypher": "MATCH p = (e:Function {is_entry: true, guarded: false})-[:CALLS*1..6]->(t:Function {id: $id}) WITH p, length(p) AS len RETURN [n IN nodes(p) | n.id] AS path ORDER BY len LIMIT 3",
+      "explanation": "Treasury.setOwner(address) is a public/external entry point with no access control that writes the privileged Treasury.owner state variable. Any attacker can call it directly to seize ownership of the Treasury.",
+      "recommended_fix": "Add an onlyOwner (or equivalent) access-control modifier to setOwner so only the current owner can change it."
+    }
+  ],
+  "rejected": [],
+  "mode": "guided"
+}

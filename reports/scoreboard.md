@@ -9,3 +9,7 @@
 | Round 2 | offline | oracle | 1.00 | 1.00 | 1.00 | 0.00 | 4.0 | 1.11s |
 | Round 2 | offline | oracle | 1.00 | 1.00 | 1.00 | 1.00 | 4.0 | 1.14s |
 | Round 3 | offline | oracle | 1.00 | 1.00 | 1.00 | 1.00 | 7.0 | 1.22s |
+| Round 1 | guided | llm | 1.00 | 1.00 | 1.00 | 1.00 | 6.0 | 6.02s |
+| Round 1 | guided | llm | 1.00 | 1.00 | 1.00 | 1.00 | 7.1 | 21.82s |
+| Round 2 | guided | llm | 1.00 | 1.00 | 1.00 | 0.67 | 6.5 | 30.23s |
+| Round 3 | guided | llm | 1.00 | 1.00 | 1.00 | 1.00 | 9.0 | 32.63s |

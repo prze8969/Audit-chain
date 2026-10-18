@@ -1,13 +1,13 @@
 {
   "round": "2",
-  "mode": "offline",
-  "patch_mode": "oracle",
+  "mode": "guided",
+  "patch_mode": "llm",
   "recall": 1.0,
   "precision": 1.0,
   "path_accuracy": 1.0,
-  "patch_success_rate": 1.0,
-  "mean_tool_calls": 4.0,
-  "mean_seconds": 1.14,
+  "patch_success_rate": 0.667,
+  "mean_tool_calls": 6.5,
+  "mean_seconds": 30.23,
   "variants": [
     {
       "variant": "h1",
@@ -16,8 +16,8 @@
       "false_positives": 0,
       "path_ok": 1,
       "rejected": 0,
-      "tool_calls": 5,
-      "seconds": 1.24,
+      "tool_calls": 7,
+      "seconds": 47.7,
       "patch_success": true,
       "patch_attempts": 1
     },
@@ -28,8 +28,8 @@
       "false_positives": 0,
       "path_ok": 1,
       "rejected": 0,
-      "tool_calls": 4,
-      "seconds": 1.17,
+      "tool_calls": 6,
+      "seconds": 41.92,
       "patch_success": true,
       "patch_attempts": 1
     },
@@ -40,10 +40,10 @@
       "false_positives": 0,
       "path_ok": 1,
       "rejected": 0,
-      "tool_calls": 4,
-      "seconds": 1.09,
-      "patch_success": true,
-      "patch_attempts": 1
+      "tool_calls": 6,
+      "seconds": 25.97,
+      "patch_success": false,
+      "patch_attempts": 3
     },
     {
       "variant": "h4",
@@ -52,8 +52,8 @@
       "false_positives": 0,
       "path_ok": 0,
       "rejected": 0,
-      "tool_calls": 3,
-      "seconds": 1.07,
+      "tool_calls": 7,
+      "seconds": 5.32,
       "patch_success": null,
       "patch_attempts": 0
     }

@@ -4,7 +4,6 @@ import os
 import sys
 import time
 from pathlib import Path
-import anthropic
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
@@ -13,21 +12,44 @@ from src.ingest import ingest
 from src.models import FindingOut, Report
 from src.verify import verify_report
 from src import tools
+from src.llm import chat
 
-SYSTEM = 'You are a smart-contract security auditor. You can learn about the contract only through the provided graph tools. Procedure: 1) call graph_summary. 2) call list_findings and unguarded_privileged_writers. 3) for every finding with impact High or Medium, and for every privileged writer, call entry_paths_to on its function to test attacker reachability. 4) call rank_findings and attack_surface_score. 5) call submit_report exactly once. Rules: never state a path that no tool returned; copy function ids exactly; when entry_paths_to returns no paths set reachable to false and path to an empty list; do not report findings that no tool returned; write each explanation in 2 to 4 sentences naming every function on the path; recommended_fix must be a minimal change: add an access-control modifier, move the state update before the external call, or require the result of the call.'
+SYSTEM = 'You audit a Solidity contract through graph tools. The summary of findings is in the first message. Steps: call entry_paths_to once for every function id listed there; call rank_findings; call submit_report once. Copy function ids and paths exactly as the tools return them. If entry_paths_to returns no paths, set reachable false and path to an empty list. Never invent findings or paths. Each explanation is 2 sentences. Keep each fix to one minimal change.'
+
+SUBMIT_SCHEMA = FindingOut.model_json_schema()
+
+
+def clean_schema(schema: dict) -> dict:
+    if not isinstance(schema, dict):
+        return schema
+    res = {}
+    for k, v in schema.items():
+        if k == 'title':
+            continue
+        if isinstance(v, dict):
+            res[k] = clean_schema(v)
+        elif isinstance(v, list):
+            res[k] = [clean_schema(item) if isinstance(item, dict) else item for item in v]
+        else:
+            res[k] = v
+    return res
+
 
 SUBMIT_TOOL = {
-    'name': 'submit_report',
-    'description': 'Submit the final audit report. Call exactly once.',
-    'input_schema': {
-        'type': 'object',
-        'properties': {
-            'findings': {
-                'type': 'array',
-                'items': FindingOut.model_json_schema(),
-            }
-        },
-        'required': ['findings'],
+    'type': 'function',
+    'function': {
+        'name': 'submit_report',
+        'description': 'Submit the final audit report. Call exactly once.',
+        'parameters': clean_schema({
+            'type': 'object',
+            'properties': {
+                'findings': {
+                    'type': 'array',
+                    'items': SUBMIT_SCHEMA,
+                }
+            },
+            'required': ['findings'],
+        }),
     },
 }
 
@@ -43,8 +65,6 @@ def run_offline(g, project: str) -> Report:
     findings_out = []
     p_writers = tools.unguarded_privileged_writers(g)
     tool_log.append({'name': 'unguarded_privileged_writers', 'input': {}, 'output': json.dumps(p_writers)})
-
-    p_map = {(item['writer'], item['var']): item for item in p_writers}
 
     for item in rf:
         fn_id = item['function_ids'][0] if item['function_ids'] else ''
@@ -109,10 +129,9 @@ def run_offline(g, project: str) -> Report:
     return rep
 
 
-async def run_agent_async(graph_name: str, project: str) -> Report:
+async def run_agent_async(graph_name: str, project: str, mode: str = 'guided') -> Report:
     g = get_graph(graph_name)
     params = StdioServerParameters(command=sys.executable, args=['-m', 'src.mcp_server'], env={**os.environ, 'AUDIT_GRAPH': graph_name})
-    client = anthropic.Anthropic(timeout=60)
     log, retries, calls_made = [], 0, 0
     final_report = None
 
@@ -120,55 +139,116 @@ async def run_agent_async(graph_name: str, project: str) -> Report:
         async with ClientSession(read, write) as session:
             await session.initialize()
             listed = await session.list_tools()
-            agent_tools = [{'name': t.name, 'description': t.description, 'input_schema': t.inputSchema} for t in listed.tools]
-            agent_tools.append(SUBMIT_TOOL)
-            messages = [{'role': 'user', 'content': 'Audit the contract in graph ' + graph_name + '. Follow the procedure.'}]
 
-            while calls_made < 14:
-                resp = client.messages.create(
-                    model=os.getenv('AGENT_MODEL', 'claude-sonnet-5-5'),
-                    max_tokens=4096,
-                    temperature=0,
-                    system=SYSTEM,
-                    tools=agent_tools,
-                    messages=messages,
+            openai_tools = []
+            for t in listed.tools:
+                openai_tools.append({
+                    'type': 'function',
+                    'function': {
+                        'name': t.name,
+                        'description': t.description,
+                        'parameters': clean_schema(t.inputSchema) if t.inputSchema else {'type': 'object', 'properties': {}},
+                    },
+                })
+            openai_tools.append(SUBMIT_TOOL)
+
+            messages = [{'role': 'system', 'content': SYSTEM}]
+
+            if mode == 'guided':
+                t0 = time.time()
+                r_sum = await session.call_tool('graph_summary', {})
+                sum_text = r_sum.content[0].text
+                log.append({'name': 'graph_summary', 'input': {}, 'output': sum_text, 'seconds': time.time() - t0})
+
+                t0 = time.time()
+                r_list = await session.call_tool('list_findings', {})
+                list_text = r_list.content[0].text
+                log.append({'name': 'list_findings', 'input': {}, 'output': list_text, 'seconds': time.time() - t0})
+
+                t0 = time.time()
+                r_pw = await session.call_tool('unguarded_privileged_writers', {})
+                pw_text = r_pw.content[0].text
+                log.append({'name': 'unguarded_privileged_writers', 'input': {}, 'output': pw_text, 'seconds': time.time() - t0})
+
+                parsed_list = json.loads(list_text) if isinstance(list_text, str) else list_text
+                parsed_pw = json.loads(pw_text) if isinstance(pw_text, str) else pw_text
+
+                candidate_funcs = set()
+                findings_summary = []
+                for f in parsed_list:
+                    if f.get('impact') in ('High', 'Medium') or f.get('klass') == 'P':
+                        for fn in f.get('function_ids', []):
+                            candidate_funcs.add(fn)
+                        findings_summary.append(f"Finding id: {f.get('id')}, klass: {f.get('klass')}, check: {f.get('check')}, functions: {f.get('function_ids')}")
+
+                for pw in parsed_pw:
+                    candidate_funcs.add(pw.get('writer'))
+                    findings_summary.append(f"Privileged writer: {pw.get('writer')}, var: {pw.get('var')}")
+
+                summary_prompt = (
+                    f"Audit contract {graph_name}.\n"
+                    f"Discovered candidate functions to check reachability: {list(candidate_funcs)}\n"
+                    f"Findings summary:\n" + "\n".join(findings_summary) + "\n\n"
+                    "Now execute steps: call entry_paths_to for each function, rank_findings, attack_surface_score, then submit_report."
                 )
-                messages.append({'role': 'assistant', 'content': resp.content})
-                uses = [b for b in resp.content if b.type == 'tool_use']
-                if not uses:
+                messages.append({'role': 'user', 'content': summary_prompt})
+            else:
+                messages.append({'role': 'user', 'content': f'Audit the contract in graph {graph_name}. Follow the procedure.'})
+
+            turns = 0
+            while turns < 8:
+                turns += 1
+                resp = chat(messages, tools=openai_tools, max_tokens=1500)
+                assistant_msg = {'role': 'assistant', 'content': resp.get('content')}
+                tool_calls = resp.get('tool_calls')
+                if tool_calls:
+                    assistant_msg['tool_calls'] = tool_calls
+                messages.append(assistant_msg)
+
+                if not tool_calls:
                     break
-                results = []
-                for b in uses:
+
+                for tc in tool_calls:
                     calls_made += 1
                     t0 = time.time()
-                    if b.name == 'submit_report':
-                        raw_findings = b.input.get('findings', [])
+                    fn_name = tc['function']['name']
+                    fn_args_raw = tc['function']['arguments']
+                    try:
+                        fn_args = json.loads(fn_args_raw) if isinstance(fn_args_raw, str) else (fn_args_raw or {})
+                    except Exception as parse_err:
+                        err_res = f'Error parsing JSON arguments: {parse_err}'
+                        messages.append({'role': 'tool', 'tool_call_id': tc['id'], 'content': err_res})
+                        continue
+
+                    if fn_name == 'submit_report':
+                        raw_findings = fn_args.get('findings', [])
                         score_dict = tools.attack_surface_score(g)
                         rep = Report(
                             project=project,
                             attack_surface=score_dict['score'],
                             findings=[FindingOut(**f) for f in raw_findings],
-                            mode='agent',
+                            mode=mode,
                         )
                         acc, rej = verify_report(rep, log, g)
                         if rej and retries < 1:
                             retries += 1
                             rej_reasons = [f"{r.get('finding_id')}: {r.get('reason')}" for r in rej]
                             err_msg = 'Verification failed for findings: ' + ', '.join(rej_reasons)
-                            results.append({'type': 'tool_result', 'tool_use_id': b.id, 'content': err_msg, 'is_error': True})
+                            messages.append({'role': 'tool', 'tool_call_id': tc['id'], 'content': err_msg})
                         else:
                             rep.findings = acc
                             rep.rejected = rej
                             final_report = rep
-                            results.append({'type': 'tool_result', 'tool_use_id': b.id, 'content': 'Report accepted and processed.'})
+                            messages.append({'role': 'tool', 'tool_call_id': tc['id'], 'content': 'Report accepted.'})
                             break
                     else:
-                        r = await session.call_tool(b.name, b.input)
-                        text = r.content[0].text
+                        r = await session.call_tool(fn_name, fn_args)
+                        full_text = r.content[0].text
                         elapsed = time.time() - t0
-                        log.append({'name': b.name, 'input': b.input, 'output': text, 'seconds': elapsed})
-                        results.append({'type': 'tool_result', 'tool_use_id': b.id, 'content': text})
-                messages.append({'role': 'user', 'content': results})
+                        log.append({'name': fn_name, 'input': fn_args, 'output': full_text, 'seconds': elapsed})
+                        truncated_text = full_text[:1500]
+                        messages.append({'role': 'tool', 'tool_call_id': tc['id'], 'content': truncated_text})
+
                 if final_report:
                     break
 
@@ -185,9 +265,9 @@ async def run_agent_async(graph_name: str, project: str) -> Report:
     return fb
 
 
-def run_agent(graph_name: str, project: str) -> Report:
+def run_agent(graph_name: str, project: str, mode: str = 'guided') -> Report:
     try:
-        return asyncio.run(run_agent_async(graph_name, project))
+        return asyncio.run(run_agent_async(graph_name, project, mode=mode))
     except Exception:
         g = get_graph(graph_name)
         fb = run_offline(g, project)
@@ -197,11 +277,11 @@ def run_agent(graph_name: str, project: str) -> Report:
 
 def main():
     if len(sys.argv) < 3:
-        print('Usage: python -m src.agent <sol_path> <project> [--mode offline|agent]')
+        print('Usage: python -m src.agent <sol_path> <project> [--mode guided|agent|offline]')
         sys.exit(1)
     sol_path = sys.argv[1]
     project = sys.argv[2]
-    mode = 'agent'
+    mode = 'guided'
     if '--mode' in sys.argv:
         idx = sys.argv.index('--mode')
         if idx + 1 < len(sys.argv):
@@ -214,7 +294,7 @@ def main():
     if mode == 'offline':
         rep = run_offline(g, project)
     else:
-        rep = run_agent(graph_name, project)
+        rep = run_agent(graph_name, project, mode=mode)
 
     Path('reports').mkdir(parents=True, exist_ok=True)
     rep_path = Path(f'reports/report_{project}.json')

@@ -1,8 +1,9 @@
 slither-analyzer
 solc-select
 falkordb
-mcp
+mcp<2
 anthropic
+openai
 pydantic
 streamlit
 networkx

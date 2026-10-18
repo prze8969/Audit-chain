@@ -1,13 +1,13 @@
 {
   "round": "3",
-  "mode": "offline",
-  "patch_mode": "oracle",
+  "mode": "guided",
+  "patch_mode": "llm",
   "recall": 1.0,
   "precision": 1.0,
   "path_accuracy": 1.0,
   "patch_success_rate": 1.0,
-  "mean_tool_calls": 7.0,
-  "mean_seconds": 1.22,
+  "mean_tool_calls": 9.0,
+  "mean_seconds": 32.63,
   "variants": [
     {
       "variant": "m7",
@@ -16,8 +16,8 @@
       "false_positives": 0,
       "path_ok": 4,
       "rejected": 0,
-      "tool_calls": 7,
-      "seconds": 1.32,
+      "tool_calls": 9,
+      "seconds": 28.97,
       "patch_success": true,
       "patch_attempts": 4
     },
@@ -28,8 +28,8 @@
       "false_positives": 0,
       "path_ok": 4,
       "rejected": 0,
-      "tool_calls": 7,
-      "seconds": 1.2,
+      "tool_calls": 9,
+      "seconds": 35.93,
       "patch_success": true,
       "patch_attempts": 4
     },
@@ -40,8 +40,8 @@
       "false_positives": 0,
       "path_ok": 4,
       "rejected": 0,
-      "tool_calls": 7,
-      "seconds": 1.14,
+      "tool_calls": 9,
+      "seconds": 32.98,
       "patch_success": true,
       "patch_attempts": 4
     }

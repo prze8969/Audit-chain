@@ -2,12 +2,12 @@ import json
 import os
 import re
 from pathlib import Path
-import anthropic
 from src.graph import get_graph, reset_graph, q
 from src.ingest import ingest
 from src.models import FindingOut
 from src import tools
 from src.mutate import TEMPLATE_PATH, MUTATIONS
+from src.llm import chat
 
 
 def propose_patch(source: str, finding: FindingOut, hints: list[str] | None = None) -> str:
@@ -23,15 +23,12 @@ def propose_patch(source: str, finding: FindingOut, hints: list[str] | None = No
         f'Source:\n{source}'
     )
     try:
-        client = anthropic.Anthropic(timeout=60)
-        resp = client.messages.create(
-            model=os.getenv('AGENT_MODEL', 'claude-sonnet-5-5'),
-            max_tokens=4096,
-            temperature=0,
-            system=system_text,
-            messages=[{'role': 'user', 'content': user_msg}],
-        )
-        content = resp.content[0].text.strip()
+        messages = [
+            {'role': 'system', 'content': system_text},
+            {'role': 'user', 'content': user_msg},
+        ]
+        resp = chat(messages, max_tokens=1500)
+        content = (resp.get('content') or '').strip()
         lines = content.split('\n')
         if lines and lines[0].startswith('```'):
             lines = lines[1:]

@@ -1,0 +1,109 @@
+{
+  "round": "1",
+  "mode": "guided",
+  "patch_mode": "llm",
+  "recall": 1.0,
+  "precision": 1.0,
+  "path_accuracy": 1.0,
+  "patch_success_rate": 1.0,
+  "mean_tool_calls": 7.1,
+  "mean_seconds": 21.82,
+  "variants": [
+    {
+      "variant": "clean",
+      "detected": 0,
+      "expected": 0,
+      "false_positives": 0,
+      "path_ok": 0,
+      "rejected": 0,
+      "tool_calls": 10,
+      "seconds": 9.31,
+      "patch_success": null,
+      "patch_attempts": 0
+    },
+    {
+      "variant": "m1",
+      "detected": 1,
+      "expected": 1,
+      "false_positives": 0,
+      "path_ok": 1,
+      "rejected": 0,
+      "tool_calls": 6,
+      "seconds": 2.83,
+      "patch_success": true,
+      "patch_attempts": 1
+    },
+    {
+      "variant": "m2",
+      "detected": 1,
+      "expected": 1,
+      "false_positives": 0,
+      "path_ok": 1,
+      "rejected": 0,
+      "tool_calls": 6,
+      "seconds": 6.15,
+      "patch_success": true,
+      "patch_attempts": 1
+    },
+    {
+      "variant": "m3",
+      "detected": 1,
+      "expected": 1,
+      "false_positives": 0,
+      "path_ok": 1,
+      "rejected": 0,
+      "tool_calls": 6,
+      "seconds": 46.12,
+      "patch_success": true,
+      "patch_attempts": 1
+    },
+    {
+      "variant": "m4",
+      "detected": 1,
+      "expected": 1,
+      "false_positives": 0,
+      "path_ok": 1,
+      "rejected": 0,
+      "tool_calls": 6,
+      "seconds": 14.28,
+      "patch_success": true,
+      "patch_attempts": 1
+    },
+    {
+      "variant": "m5",
+      "detected": 2,
+      "expected": 2,
+      "false_positives": 0,
+      "path_ok": 2,
+      "rejected": 0,
+      "tool_calls": 7,
+      "seconds": 47.88,
+      "patch_success": true,
+      "patch_attempts": 2
+    },
+    {
+      "variant": "m6",
+      "detected": 2,
+      "expected": 2,
+      "false_positives": 0,
+      "path_ok": 2,
+      "rejected": 0,
+      "tool_calls": 7,
+      "seconds": 6.39,
+      "patch_success": true,
+      "patch_attempts": 2
+    },
+    {
+      "variant": "m7",
+      "detected": 4,
+      "expected": 4,
+      "false_positives": 0,
+      "path_ok": 4,
+      "rejected": 0,
+      "tool_calls": 9,
+      "seconds": 41.63,
+      "patch_success": true,
+      "patch_attempts": 4
+    }
+  ]
+}
