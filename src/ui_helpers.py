@@ -60,6 +60,64 @@ def path_to_dot(path: list[str], sink: str = '') -> str:
     return '\n'.join(lines)
 
 
+def full_graph_to_dot(g) -> str:
+    """Generate Graphviz DOT representation of the entire contract call and state graph."""
+    Q = chr(34)
+    lines = [
+        'digraph FullGraph {',
+        '  rankdir=LR;',
+        '  bgcolor="transparent";',
+        '  node [shape=box, style="rounded,filled", fontname="sans-serif", fontsize=10];',
+        '  edge [fontname="sans-serif", fontsize=9];',
+    ]
+
+    try:
+        # Get all functions
+        fn_rows = g.query("MATCH (f:Function) RETURN f.id, f.is_entry, f.guarded, f.visibility").result_set
+        for row in fn_rows:
+            f_id, is_entry, guarded, vis = row[0], row[1], row[2], row[3]
+            if is_entry and not guarded:
+                fill = "#22c55e" # Green = Attacker Entry
+                font = "#ffffff"
+                border = "#16a34a"
+                lbl = f"{f_id}\\n[Public Entry]"
+            elif guarded:
+                fill = "#3b82f6" # Blue = Guarded
+                font = "#ffffff"
+                border = "#2563eb"
+                lbl = f"{f_id}\\n[Guarded]"
+            else:
+                fill = "#334155" # Dark Slate = Internal/Helper
+                font = "#f1f5f9"
+                border = "#475569"
+                lbl = f_id
+            lines.append(f'  {Q}{f_id}{Q} [label={Q}{lbl}{Q}, fillcolor="{fill}", fontcolor="{font}", color="{border}", penwidth=1.5];')
+
+        # Get state variables
+        var_rows = g.query("MATCH (v:StateVar) RETURN v.id, v.privileged").result_set
+        for row in var_rows:
+            v_id, priv = row[0], row[1]
+            fill = "#ea580c" if priv else "#475569" # Orange = Privileged
+            lbl = f"{v_id}\\n[Privileged]" if priv else v_id
+            lines.append(f'  {Q}{v_id}{Q} [label={Q}{lbl}{Q}, shape=box, fillcolor="{fill}", fontcolor="#ffffff", color="#c2410c", penwidth=2];')
+
+        # Get calls
+        call_rows = g.query("MATCH (a:Function)-[r:CALLS]->(b:Function) RETURN a.id, b.id").result_set
+        for row in call_rows:
+            lines.append(f'  {Q}{row[0]}{Q} -> {Q}{row[1]}{Q} [label="CALLS", color="#ef4444", penwidth=1.5];')
+
+        # Get writes
+        write_rows = g.query("MATCH (a:Function)-[r:WRITES]->(b:StateVar) RETURN a.id, b.id").result_set
+        for row in write_rows:
+            lines.append(f'  {Q}{row[0]}{Q} -> {Q}{row[1]}{Q} [label="WRITES", color="#f97316", style="dashed", penwidth=1.5];')
+
+    except Exception:
+        lines.append('  err [label="Graph empty or query error", fillcolor="#334155", fontcolor="#ffffff"];')
+
+    lines.append('}')
+    return '\n'.join(lines)
+
+
 def run_audit_pipeline(source_code: str, project_name: str, mode: str, status_placeholder=None):
     if len(source_code.encode('utf-8')) > 20 * 1024:
         raise ValueError('File too large (maximum allowed size is 20 KB).')

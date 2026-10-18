@@ -5,12 +5,14 @@ from pathlib import Path
 import time
 import streamlit as st
 
+from src.graph import get_graph
 from src.patch import patch_with_retries
 from src.ui_helpers import (
     CLASS_LABELS,
     SEVERITY_COLORS,
     check_health,
     compute_file_hash,
+    full_graph_to_dot,
     generate_markdown_report,
     path_to_dot,
     run_audit_pipeline,
@@ -226,7 +228,12 @@ if audit_data:
 
     st.markdown('<div style="height: 16px;"></div>', unsafe_allow_html=True)
 
-    tab_findings, tab_scoreboard, tab_glossary = st.tabs(['🔍 Findings & Remediation', '📊 How well does it work?', '📖 Security Glossary'])
+    tab_findings, tab_graph, tab_scoreboard, tab_glossary = st.tabs([
+        '🔍 Findings & Remediation',
+        '🕸️ Code Knowledge Graph',
+        '📊 How well does it work?',
+        '📖 Security Glossary',
+    ])
 
     with tab_findings:
         if not rep.findings:
@@ -336,6 +343,35 @@ Every finding in this report has undergone rigorous mathematical verification ag
         with d_col2:
             md_report = generate_markdown_report(audit_data)
             st.download_button('📥 Download Report (Markdown)', data=md_report, file_name=f'audit_{rep.project}.md', mime='text/markdown', use_container_width=True)
+
+    with tab_graph:
+        st.subheader(f'🕸️ FalkorDB Code Knowledge Graph: `{rep.project}`')
+        st.caption('Complete directed multi-hop graph of public entries, internal functions, modifier guards, and state-variable writes.')
+        
+        g = get_graph(f'audit_{rep.project}')
+        full_dot = full_graph_to_dot(g)
+        st.graphviz_chart(full_dot, use_container_width=True)
+
+        g_col1, g_col2 = st.columns(2)
+        with g_col1:
+            with st.expander('📊 Graph Legend & Node Types', expanded=True):
+                st.markdown('''
+- 🟢 **Green Nodes**: Attacker-callable public/external entry points with no modifier guard.
+- 🔵 **Blue Nodes**: Guarded functions (protected by `onlyOwner` or `msg.sender` condition).
+- ⬛ **Dark Slate Nodes**: Internal helper functions.
+- 🟧 **Orange Nodes**: Privileged state variables (`owner`, `admin`, `balances`).
+- 🔴 **Red Arrows**: Directed `CALLS` edges discovered in contract AST.
+- 🟠 **Dashed Arrows**: `WRITES` edges mutating persistent storage.
+''')
+        with g_col2:
+            with st.expander('🔍 Live FalkorDB Cypher Console', expanded=True):
+                cypher_input = st.text_input('Run Cypher Query', value='MATCH (a)-[r]->(b) RETURN a.id, type(r), b.id LIMIT 25')
+                if st.button('Execute Query', key='exec_cypher'):
+                    try:
+                        res = g.query(cypher_input).result_set
+                        st.dataframe(res, use_container_width=True)
+                    except Exception as q_err:
+                        st.error(f'Cypher query error: {q_err}')
 
     with tab_scoreboard:
         st.subheader('📊 Benchmark Results & Verifier Performance')
