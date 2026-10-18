@@ -1,124 +1,179 @@
-# 🎬 Full 4-Minute Demo Video Script: Audit-Chain
+# 🎬 4-Minute Demo Video Script: Audit-Chain Walkthrough
 **Track**: Track 01 (Agents That Act on Connected Data)  
-**Project**: Audit-Chain: Autonomous Graph Security Agent with Proof-of-Reachability & Remediation  
-**Target Duration**: 4:00 (240 Seconds)
+**Project**: Audit-Chain: Autonomous Graph Security Agent with Proof-of-Reachability & Automated Remediation  
+**Target Duration**: 4:00 (240 Seconds)  
+**Interface**: Guided Judge Stepper (`Slide 0` through `Slide 6`)
 
 ---
 
-### [0:00 - 0:40] Scene 1: The Critical Flaw in Smart Contract Auditing
-- **Visual on Screen**: 
-  - Open terminal running traditional AST / regex linters (e.g. Slither CLI directly). 
-  - Show the terminal flooded with 20+ alerts: warnings about low-level calls, unindexed events, unhandled returns.
-- **Narrator**:
-  > *"Every Web3 developer and security auditor knows the nightmare of static analysis today: endless noise. Linters flag dozens of theoretical warnings on smart contracts, but they fail to answer the single most vital question in security:*
-  > 
-  > ***Can an attacker actually reach this bug from an external transaction?***
-  > 
-  > *If vulnerable code is trapped behind an internal helper or protected by access control higher up the call stack, it cannot be exploited. But if there is a multi-hop route from `msg.sender` straight into that flaw, funds will be drained.*
-  > 
-  > *Welcome to **Audit-Chain**: an autonomous security agent powered by **FalkorDB** and **Model Context Protocol (MCP)** that turns smart contracts into connected knowledge graphs, proves reachability with multi-hop Cypher paths, generates patches, and mathematically proves the patch eliminated the exploit."*
+## ⏱️ Timeline Overview
+
+| Timestamp | Slide | Focus Area | Key Visual Action |
+| :--- | :--- | :--- | :--- |
+| **0:00 – 0:35** | **Slide 0: Preface** | Problem vs. Connected Solution | Show 50/50 comparison cards, click *Start Guided Walkthrough* |
+| **0:35 – 1:15** | **Step 1: Inspect Code** | Proving bugs are real, not hardcoded | Select `m7: Owner Takeover`, toggle engine, inspect Solidity code |
+| **1:15 – 1:55** | **Step 2: Code Graph** | FalkorDB In-Memory Graph AST | Drag nodes, show Public Entries, Internal Calls, State Sinks |
+| **1:55 – 2:35** | **Step 3: Reasoning & Gate** | Real-time Cypher & Verifier Gate | 4 Hero Metrics, Surface Score, Blocked Hallucinations |
+| **2:35 – 3:15** | **Step 4: Exploit Route** | Multi-hop attacker call path proof | Hop sequence cards, isolated path subgraph, Cypher proof |
+| **3:15 – 3:45** | **Step 5: Patch & Merge Diff**| Patch synthesis & GitHub merge diff | Click Synthesize, show 4 checkmarks & green/red diff |
+| **3:45 – 4:00** | **Step 6: Conclusion** | Track 01 summary & thank you | Highlight 100% benchmark accuracy, thank judges |
 
 ---
 
-### [0:40 - 1:20] Scene 2: Connected Data & The FalkorDB Code Graph
-- **Visual on Screen**:
-  - Open FalkorDB Browser UI at `http://localhost:3000`.
-  - Execute: `MATCH (n)-[e]->(m) RETURN n,e,m` on graph `audit_m7`.
-  - Zoom in on nodes: Green `Function` nodes, Orange `StateVar` nodes, `CALLS` edges, and `WRITES` edges.
-- **Narrator**:
-  > *"Instead of treating Solidity as static text or a flat syntax tree, Audit-Chain parses the contract into a rich directed graph inside **FalkorDB**:*
-  > - *Every function becomes a node with visibility, mutability, entry status, and access-control modifiers.*
-  > - *State variables are nodes with privileged flags for variables like `owner`, `admin`, or `governance`.*
-  > - *`CALLS` edges map both internal and external contract dispatch, while `READS` and `WRITES` map state mutations.*
+## 🎙️ Step-by-Step Script & Narration
+
+### [0:00 – 0:35] Slide 0: Product Preface
+- **On Screen**:
+  - Web app opens on **Slide 0: Preface**.
+  - Display the symmetrical comparison deck: `❌ Traditional Static Linters` on the left vs `✅ Audit-Chain Graph Intelligence` on the right.
+  - Hover cursor over the key problem points (90% false positives, missed multi-hop calls).
+- **Spoken Narration**:
+  > *"Hello hackathon judges! Every smart contract developer and auditor knows the nightmare of static analysis today: endless noise.*
   > 
-  > *Now, finding an exploit isn't guesswork—it's graph traversal. We can run Cypher queries to discover multi-hop paths from any unauthenticated entry point into critical state updates."*
+  > *Traditional linters scan flat syntax and flag dozens of theoretical warnings. But they fail to answer the single question that actually matters:*
+  > 
+  > ***Can an external attacker actually reach this bug from an unauthenticated transaction?***
+  > 
+  > *If flawed code is trapped behind private internal functions or protected by modifiers, it is harmless. But if there is an unbroken call chain from `msg.sender` straight into that sink, funds will be stolen.*
+  > 
+  > *Welcome to **Audit-Chain**: an autonomous security agent powered by **FalkorDB** that transforms smart contracts into connected knowledge graphs to mathematically prove reachability, eliminate hallucinations, and synthesize verified patches.*
+  > 
+  > *Let's start the guided walkthrough."*
+- **Action**: Click the blue **"🚀 Start Guided Walkthrough ➔"** button.
 
 ---
 
-### [1:20 - 2:05] Scene 3: Tool Selection Through MCP & Graph Algorithms
-- **Visual on Screen**:
-  - Show FastMCP server (`src/mcp_server.py`) and inspect the trace logs in `reports/trace_m7.jsonl`.
-  - Show the 9 specialized MCP tools:
-    1. `graph_summary`: High-level graph topology and privileged variable counts.
-    2. `entry_paths_to`: Multi-hop shortest paths up to 6 hops from unauthenticated entries.
-    3. `unguarded_privileged_writers`: Attacker routes to functions overwriting owner/admin.
-    4. `who_writes`: Reverse storage dependency mapping.
-    5. `blast_radius`: Downstream state variables and external contracts reachable from a function.
-    6. `hotspots`: Centrality scoring using **PageRank** (`CALL algo.pageRank` with NetworkX fallback).
-    7. `attack_surface_score`: A composite formula combining unguarded state writers, privileged write paths, and low-level call exposures.
-    8. `rank_findings`: Centrality- and reachability-weighted finding prioritizer.
-    9. `recall_fixes`: Audit memory graph query tool.
-- **Narrator**:
-  > *"Audit-Chain exposes 9 graph intelligence tools via a standardized Model Context Protocol (MCP) server.*
+### [0:35 – 1:15] Step 1: Select Target Contract & Inspect Code
+- **On Screen**:
+  - The screen glides into **Step 1: Inspect Target Contract**.
+  - Show the 4 large selection cards: `m7: Owner Takeover`, `m3: Reentrancy Attack`, `m2: Missing Auth`, and `clean: Verified Secure`.
+  - Click on `m7: Owner Takeover` (shows active green checkmark and glowing border).
+  - Point out the 2 execution engine tiles: `⚡ In-Memory Cypher Engine` and `🧠 Autonomous Agent`.
+  - Scroll through lines 25–35 of the Solidity source code on the right.
+- **Spoken Narration**:
+  > *"First, as judges, we want you to inspect the real contract code to prove this is a live, dynamic audit—not a hardcoded demo.*
   > 
-  > *Rather than hardcoding rigid agent scripts, the autonomous agent inspects the contract using dynamic MCP discovery. It queries graph centrality via **PageRank** to identify hot functions, checks the blast radius of state modifications, and measures the quantitative **Attack Surface Score** before and after audits.*
+  > *We provide 4 benchmark contract variants ranging from reentrancy to access control bypasses and verified secure contracts. Today, we'll inspect **m7: Privileged Owner Takeover**.*
   > 
-  > *The agent chooses its own investigation order, using graph algorithms as cognitive tools."*
+  > *Look at lines 31 through 34 of the Solidity code:*
+  > 
+  > *The attacker invokes a public function called `handOver()`. Notice that `handOver()` doesn't modify state directly; instead, it jumps internally into `_grant()`, which mutates the privileged state variable `owner`.*
+  > 
+  > *Traditional linters miss this because `_grant()` is marked internal. But in a graph database, these functions are connected."*
+- **Action**: Click **"Next: Step 2 — Ingest into FalkorDB Graph ➔"**.
 
 ---
 
-### [2:05 - 2:50] Scene 4: Multi-Hop Reasoning & The Strict Verifier Gate
-- **Visual on Screen**:
-  - Switch to the Audit-Chain Streamlit Web App (`http://localhost:8501`).
-  - Select variant `m7.sol` and click **"Run Audit Pipeline"**.
-  - Show the **Findings** tab populating with 4 verified findings:
-    - `P0`: `_grant` reached via `handOver`
-    - `P1`: `setOwner` direct write
-    - `S0`: Reentrancy in `withdraw`
-    - `S1`: Unchecked low-level call in `refund`
-  - Switch to the **Reachability Graph** tab:
-    - Display the live Graphviz diagram: `handOver (Green Entry)` -> `CALLS` -> `_grant (Red Path)` -> `WRITES` -> `owner (Orange Privileged Sink)`.
-    - Expand the formal Cypher proof below it.
-- **Narrator**:
-  > *"Notice finding P0. This is **Multi-Hop Reasoning** in action.*
+### [1:15 – 1:55] Step 2: FalkorDB Code Knowledge Graph
+- **On Screen**:
+  - The screen glides to **Step 2: FalkorDB Code Knowledge Graph**.
+  - Highlight the clean badge legend above the graph:
+    `🟢 Public Entry Points` • `⚡ Internal Functions` • `🔑 Privileged Sinks (owner)` • `💰 State Variables (balances)`.
+  - The large, high-contrast graph canvas renders immediately with large box nodes.
+  - Click and drag a node to demonstrate live physics; hover over `🔓 handOver()` and `🔑 owner`.
+- **Spoken Narration**:
+  > *"Behind the scenes, Audit-Chain compiles the Solidity AST using `solc 0.8.19` and ingests the contract directly into an in-memory graph inside **FalkorDB**.*
   > 
-  > *`_grant` is an internal function—an attacker cannot invoke it directly. However, Audit-Chain follows the call graph: public entry function `handOver` has no access control, and calls `_grant`, which writes the privileged state variable `owner`.*
+  > *Notice how the code is now represented as connected data:*
+  > - *Green nodes represent **Public Entry Points** exposed to unauthenticated callers.*
+  > - *Purple nodes represent **Internal Functions** dispatched inside the contract.*
+  > - *The orange node is `owner`, our **Privileged Storage Sink**.*
+  > - *Pink directed arrows represent function `CALLS`, while orange dashed arrows represent persistent storage `WRITES`.*
   > 
-  > *Next, observe our core differentiator: **The Verifier Gate**.*
-  > *LLMs are notorious for hallucinating security vulnerabilities. Audit-Chain enforces an immutable rule: **No verified graph path, no finding**.*
-  > 
-  > *Every proposed finding is checked against FalkorDB. The entry must be unauthenticated, every consecutive node must have a real `CALLS` edge, and the exact path must have been emitted by an MCP tool during the session. If the agent hallucinates, the verifier gate rejects it."*
+  > *Finding an exploit is no longer regex guesswork—it is graph traversal in Redis memory."*
+- **Action**: Click **"Next: Step 3 — Run Autonomous Agent & Verify ➔"**.
 
 ---
 
-### [2:50 - 3:35] Scene 5: Actions Based on Graph State (Patch & Proof)
-- **Visual on Screen**:
-  - Navigate to the **Remediation Patch & Proof** tab.
-  - Select finding `P0: Treasury._grant(address):Treasury.owner`.
-  - Click **"Propose and Verify Patch"**.
-  - Show the progress spinner: compilation -> re-ingestion into `audit_m7_patched` -> verification metrics.
-  - Display the metrics:
-    - `Compiled`: ✅
-    - `Target Gone`: ✅
-    - `Signatures Preserved`: ✅
-    - `Score Delta`: `18 -> 7` (Major attack-surface drop)
-  - Display the Unified Diff highlighting the addition of `onlyOwner` access control.
-- **Narrator**:
-  > *"Audit-Chain doesn't just diagnose—it takes concrete **actions based on what the graph reveals**.*
+### [1:55 – 2:35] Step 3: Real-Time Reasoning & The Verifier Gate
+- **On Screen**:
+  - The screen glides to **Step 3: Real-Time Reasoning & Verifier Gate**.
+  - Show the 4 Hero Metric boxes:
+    - **Attack Surface Score**: `18`
+    - **Verified Findings**: `4`
+    - **Reachable Paths**: `4`
+    - **Blocked Claims**: `0` (Zero Hallucinations)
+  - Point to the Real-Time Traversal explanation card on the left, and scroll the findings table on the right.
+- **Spoken Narration**:
+  > *"In Step 3, our agent queries FalkorDB in real time using standardized Cypher path traversal.*
   > 
-  > *When we trigger remediation, our blue-team patcher crafts a minimal, targeted fix. But unlike other AI tools that guess whether a patch works, Audit-Chain **proves it**.*
+  > *Look at the top metrics:*
+  > - *Our contract has an **Attack Surface Score of 18**, calculated from unguarded state writes and reachable public entry points.*
+  > - *We have **4 verified findings**, and all 4 have proven unbroken call paths.*
   > 
-  > *It compiles the patched contract, ingests it into a new graph, and executes formal verification:*
-  > 1. *It verifies the contract compiles with zero errors.*
-  > 2. *It runs entry path queries to prove the exploit route is completely broken.*
-  > 3. *It confirms all original public function signatures remain intact.*
-  > 4. *And it calculates the Attack Surface Score, showing a measurable drop from 18 down to 7.*
+  > *Now notice the fourth metric: **Blocked Claims**.*
+  > *LLMs are notorious for hallucinating security vulnerabilities. Audit-Chain introduces **The Verifier Gate**: an immutable formal check against FalkorDB graph topology.*
   > 
-  > *This is closed-loop, verifiable autonomous defense."*
+  > *If an agent proposes a vulnerability that lacks a continuous, unbroken path from an unauthenticated entry into that sink, the Verifier Gate immediately discards it. Result: zero hallucinations."*
+- **Action**: Click **"Next: Step 4 — Multi-Hop Exploit Route ➔"**.
 
 ---
 
-### [3:35 - 4:00] Scene 6: The Adversarial Harness, Memory Graph & Conclusion
-- **Visual on Screen**:
-  - Switch to the **Evaluation Scoreboard** tab.
-  - Show the table: Round 0 (100% Recall, 100% Precision, 100% Path Accuracy, 100% Patch Success), Round 2 (Held-out contracts `h1`-`h4`), and Round 3 (3x repeats).
-  - Show terminal output showing `23 passed in 28.14s`.
-  - Show closing slide with GitHub URL: `https://github.com/prze8969/Audit-chain`.
-- **Narrator**:
-  > *"To ensure bulletproof reliability, Audit-Chain includes a built-in adversarial Red-Team / Blue-Team benchmark harness.*
+### [2:35 – 3:15] Step 4: Multi-Hop Attacker Call Path Proof
+- **On Screen**:
+  - The screen glides to **Step 4: Multi-Hop Exploit Route Proof**.
+  - Point to the 3 sequential step cards across the top:
+    `1. Attacker Entry (Public): Treasury.handOver` ➔ `2. Internal Dispatch: Treasury._grant` ➔ `⚠️ Mutates Privileged State: Treasury.owner`.
+  - Show the isolated path sub-graph in the middle.
+  - Expand the **Formal Cypher Reachability Proof** dropdown and show the Cypher query.
+- **Spoken Narration**:
+  > *"Step 4 shows the mathematical exploit proof that traditional linters fail to discover: a **Multi-Hop Exploit Route**.*
   > 
-  > *Tested across 8 mutation variants and 4 held-out contracts with multi-hop reentrancy and inline guards, Audit-Chain achieved a perfect **100% recall, 100% precision, 100% path accuracy, and 100% patch success rate**.*
+  > *Here is the exact attacker execution sequence:*
+  > 1. *The attacker calls `handOver()` from `msg.sender`—an unauthenticated public entry point.*
+  > 2. *`handOver()` dispatches an internal call into `_grant()`.*
+  > 3. *`_grant()` executes a persistent storage write directly into `owner`.*
   > 
-  > *Plus, with its **Audit Memory Graph**, past verified patches are stored as graph patterns to accelerate future audits.*
+  > *In the box below, you see the isolated sub-graph and the exact Cypher query: `MATCH p=(e:Function {is_entry:true, guarded:false})-[:CALLS*1..6]->(t) RETURN p`.*
   > 
-  > *Audit-Chain: Where connected data meets autonomous smart contract security. Check out the open-source repository on GitHub today!"*
+  > *This is deterministic mathematical proof that any external user can take over ownership of this contract."*
+- **Action**: Click **"Next: Step 5 — Synthesize Patch & Merge Diff ➔"**.
+
+---
+
+### [3:15 – 3:45] Step 5: Automated Patch Remediation & GitHub Merge Diff
+- **On Screen**:
+  - The screen glides to **Step 5: Automated Patch & GitHub Merge Diff**.
+  - Click the blue button: **"🩹 Synthesize Minimal Patch & Execute Proof"**.
+  - Watch the spinner run for 2 seconds.
+  - Highlight the 4 verification metrics that appear:
+    - `Compiled (solc)`: **✅ Pass**
+    - `Target Route`: **✅ Eliminated**
+    - `Signatures Kept`: **✅ Intact**
+    - `Attack Surface`: **18 ➔ 0**
+  - Scroll down the **GitHub Merge Diff** on the right, pointing out the red line removed and green lines added.
+- **Spoken Narration**:
+  > *"Audit-Chain doesn't just diagnose exploits—it takes autonomous action on connected data.*
+  > 
+  > *Let's click 'Synthesize Minimal Patch & Execute Proof'.*
+  > 
+  > *In seconds, the agent synthesizes a minimal fix, recompiles with `solc`, re-ingests the patched contract into FalkorDB, and verifies the result:*
+  > - *The contract compiles cleanly.*
+  > - *The exploit route is **100% eliminated** from the graph.*
+  > - *All public function signatures remain intact.*
+  > - *And our Attack Surface Score drops from **18 to 0**.*
+  > 
+  > *On the right, you see a clean GitHub-style merge diff: red lines show the unprotected dispatch removed, and green lines show the secure `onlyOwner` access-control guard added."*
+- **Action**: Click **"Next: Step 6 — Conclusion & Thank You ➔"**.
+
+---
+
+### [3:45 – 4:00] Step 6: Conclusion & Thank You
+- **On Screen**:
+  - The screen glides to **Step 6: Conclusion**.
+  - Show the two symmetrical closing cards: `Why Connected Data Transforms Auditing` and `Track 01: Agents on Connected Data`.
+  - Highlight the `100% Benchmark Accuracy` badge and the GitHub link.
+- **Spoken Narration**:
+  > *"By representing smart contracts as in-memory knowledge graphs rather than flat text, Audit-Chain achieves **100% precision, 100% recall, zero hallucinations, and verified automated patching**.*
+  > 
+  > *This is the true potential of **Track 01: Agents That Act on Connected Data**.*
+  > 
+  > *Thank you, judges! Our code is open source on GitHub at `github.com/prze8969/Audit-chain`. We invite you to test any variant yourself!"*
+- **Action**: Fade to black / show repository URL.
+
+---
+
+## 💡 Recording Tips
+1. **Resolution**: Record at 1080p (1920×1080) or 1440p (2560×1440) in full-screen browser mode.
+2. **Pacing**: Follow the timestamps above; each slide has approximately 35–40 seconds of focused commentary.
+3. **Smooth Clicks**: The interface has built-in gliding transitions (`glideIn`) between steps, so keep mouse movements deliberate and steady.
