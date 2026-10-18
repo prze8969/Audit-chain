@@ -40,10 +40,10 @@ def render_pure_large_graph_html(g, height: int = 580) -> str:
                     'id': f_id,
                     'label': f"🔓 {short_label}()\n[Public Entry]",
                     'color': {'background': '#064e3b', 'border': '#10b981', 'highlight': {'background': '#047857', 'border': '#34d399'}},
-                    'font': {'color': '#ecfdf5', 'size': 15, 'face': 'Inter, sans-serif', 'bold': True},
+                    'font': {'color': '#ecfdf5', 'size': 22, 'face': 'Inter, sans-serif', 'bold': True},
                     'shape': 'box',
-                    'margin': 14,
-                    'borderWidth': 2,
+                    'margin': 20,
+                    'borderWidth': 3,
                 })
             elif guarded:
                 # Blue = Guarded Function
@@ -51,10 +51,10 @@ def render_pure_large_graph_html(g, height: int = 580) -> str:
                     'id': f_id,
                     'label': f"🛡️ {short_label}()\n[Guarded]",
                     'color': {'background': '#1e3a8a', 'border': '#3b82f6', 'highlight': {'background': '#1d4ed8', 'border': '#60a5fa'}},
-                    'font': {'color': '#eff6ff', 'size': 15, 'face': 'Inter, sans-serif', 'bold': True},
+                    'font': {'color': '#eff6ff', 'size': 22, 'face': 'Inter, sans-serif', 'bold': True},
                     'shape': 'box',
-                    'margin': 14,
-                    'borderWidth': 2,
+                    'margin': 20,
+                    'borderWidth': 3,
                 })
             else:
                 # Purple = Internal Function
@@ -62,10 +62,10 @@ def render_pure_large_graph_html(g, height: int = 580) -> str:
                     'id': f_id,
                     'label': f"⚡ {short_label}()\n[Internal]",
                     'color': {'background': '#4c1d95', 'border': '#a855f7', 'highlight': {'background': '#6b21a8', 'border': '#c084fc'}},
-                    'font': {'color': '#faf5ff', 'size': 15, 'face': 'Inter, sans-serif', 'bold': True},
+                    'font': {'color': '#faf5ff', 'size': 22, 'face': 'Inter, sans-serif', 'bold': True},
                     'shape': 'box',
-                    'margin': 14,
-                    'borderWidth': 2,
+                    'margin': 20,
+                    'borderWidth': 3,
                 })
 
         # State Variables
@@ -79,9 +79,9 @@ def render_pure_large_graph_html(g, height: int = 580) -> str:
                     'id': v_id,
                     'label': f"🔑 {short_var}\n[Privileged Sink]",
                     'color': {'background': '#7c2d12', 'border': '#f97316', 'highlight': {'background': '#9a3412', 'border': '#fb923c'}},
-                    'font': {'color': '#fff7ed', 'size': 16, 'face': 'Inter, sans-serif', 'bold': True},
+                    'font': {'color': '#fff7ed', 'size': 24, 'face': 'Inter, sans-serif', 'bold': True},
                     'shape': 'box',
-                    'margin': 16,
+                    'margin': 22,
                     'borderWidth': 3,
                 })
             else:
@@ -90,9 +90,9 @@ def render_pure_large_graph_html(g, height: int = 580) -> str:
                     'id': v_id,
                     'label': f"💰 {short_var}\n[StateVar]",
                     'color': {'background': '#164e63', 'border': '#06b6d4', 'highlight': {'background': '#155e75', 'border': '#22d3ee'}},
-                    'font': {'color': '#ecfeff', 'size': 14, 'face': 'Inter, sans-serif', 'bold': True},
+                    'font': {'color': '#ecfeff', 'size': 20, 'face': 'Inter, sans-serif', 'bold': True},
                     'shape': 'box',
-                    'margin': 12,
+                    'margin': 18,
                     'borderWidth': 2,
                 })
 
@@ -103,10 +103,10 @@ def render_pure_large_graph_html(g, height: int = 580) -> str:
                 'from': row[0],
                 'to': row[1],
                 'label': 'CALLS',
-                'arrows': {'to': {'enabled': True, 'scaleFactor': 1.1}},
+                'arrows': {'to': {'enabled': True, 'scaleFactor': 1.2}},
                 'color': {'color': '#ec4899', 'highlight': '#f472b6'},
-                'font': {'color': '#f472b6', 'size': 12, 'align': 'middle', 'strokeWidth': 2, 'strokeColor': '#090d16'},
-                'width': 2.5
+                'font': {'color': '#f472b6', 'size': 15, 'align': 'middle', 'strokeWidth': 2, 'strokeColor': '#090d16'},
+                'width': 3.5
             })
 
         # WRITES Edges
@@ -116,11 +116,11 @@ def render_pure_large_graph_html(g, height: int = 580) -> str:
                 'from': row[0],
                 'to': row[1],
                 'label': 'WRITES',
-                'arrows': {'to': {'enabled': True, 'scaleFactor': 1.1}},
+                'arrows': {'to': {'enabled': True, 'scaleFactor': 1.2}},
                 'dashes': [6, 4],
                 'color': {'color': '#f97316', 'highlight': '#fb923c'},
-                'font': {'color': '#fb923c', 'size': 12, 'align': 'middle', 'strokeWidth': 2, 'strokeColor': '#090d16'},
-                'width': 3
+                'font': {'color': '#fb923c', 'size': 15, 'align': 'middle', 'strokeWidth': 2, 'strokeColor': '#090d16'},
+                'width': 4
             })
 
     except Exception as err:
@@ -128,9 +128,9 @@ def render_pure_large_graph_html(g, height: int = 580) -> str:
             'id': 'error',
             'label': f"Error: {err}",
             'color': {'background': '#7f1d1d', 'border': '#ef4444'},
-            'font': {'color': '#fca5a5', 'size': 14},
+            'font': {'color': '#fca5a5', 'size': 16},
             'shape': 'box',
-            'margin': 10
+            'margin': 14
         })
 
     nodes_json = json.dumps(nodes)
@@ -161,7 +161,7 @@ def render_pure_large_graph_html(g, height: int = 580) -> str:
           position: absolute;
           bottom: 12px;
           right: 16px;
-          font-size: 12px;
+          font-size: 13px;
           color: #94a3b8;
           background: rgba(15, 23, 42, 0.9);
           padding: 6px 14px;
@@ -185,11 +185,11 @@ def render_pure_large_graph_html(g, height: int = 580) -> str:
             enabled: true,
             solver: 'barnesHut',
             barnesHut: {{
-              gravitationalConstant: -24000,
-              centralGravity: 0.1,
-              springLength: 220,
-              springConstant: 0.04,
-              damping: 0.25,
+              gravitationalConstant: -14000,
+              centralGravity: 0.12,
+              springLength: 250,
+              springConstant: 0.05,
+              damping: 0.3,
               avoidOverlap: 1
             }},
             stabilization: {{
@@ -208,7 +208,7 @@ def render_pure_large_graph_html(g, height: int = 580) -> str:
             shadow: {{
               enabled: true,
               color: 'rgba(0,0,0,0.6)',
-              size: 8,
+              size: 10,
               x: 2,
               y: 2
             }}
@@ -222,15 +222,23 @@ def render_pure_large_graph_html(g, height: int = 580) -> str:
         }};
         var network = new vis.Network(container, data, options);
         network.once('stabilizationIterationsDone', function() {{
-          network.fit({{
-            animation: {{ duration: 500, easingFunction: 'easeInOutQuad' }}
-          }});
+          network.fit();
+          var s = network.getScale();
+          if (s < 1.15) {{
+            network.moveTo({{ scale: 1.25 }});
+          }}
         }});
         network.once('afterDrawing', function() {{
-          network.fit();
+          var s = network.getScale();
+          if (s < 1.15) {{
+            network.moveTo({{ scale: 1.25 }});
+          }}
         }});
         setTimeout(function() {{
-          network.fit();
+          var s = network.getScale();
+          if (s < 1.15) {{
+            network.moveTo({{ scale: 1.25 }});
+          }}
         }}, 300);
       </script>
     </body>
@@ -488,7 +496,7 @@ with st.sidebar:
 step = st.session_state['step_index']
 
 # ==============================================================================
-# SLIDE 0: PREFACE (Systematic Symmetrical Deck)
+# SLIDE 0: PREFACE (Systematic Symmetrical Deck - Large & Readable)
 # ==============================================================================
 if step == 0:
     st.markdown('''
@@ -498,26 +506,26 @@ if step == 0:
 </div>
 ''', unsafe_allow_html=True)
 
-    # Systematic 50/50 Comparison Deck
+    # Systematic 50/50 Comparison Deck with Large, Readable Typography
     col_left, col_right = st.columns(2)
     with col_left:
         st.markdown('''
-<div class="deck-card" style="border-top: 4px solid #ef4444;">
+<div class="deck-card" style="border-top: 4px solid #ef4444; min-height: 480px; padding: 34px 38px;">
     <div>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-            <h2 style="margin:0; font-size:1.45rem; color:#f87171;">❌ Traditional Static Linters</h2>
-            <span style="background:rgba(239,68,68,0.2); color:#fca5a5; padding:3px 10px; border-radius:12px; font-size:12px; font-weight:700;">FLAT TEXT SCANNING</span>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h2 style="margin:0; font-size:1.85rem; color:#f87171;">❌ Traditional Static Linters</h2>
+            <span style="background:rgba(239,68,68,0.25); color:#fca5a5; padding:6px 14px; border-radius:14px; font-size:13.5px; font-weight:700;">FLAT TEXT SCANNING</span>
         </div>
-        <p style="color:#94a3b8; font-size:14.5px; margin-bottom:16px;">
+        <p style="color:#cbd5e1; font-size:18px; line-height:1.7; margin-bottom:20px;">
             Analyzers inspect regular expressions and AST tokens without verifying if an attacker can actually reach the line.
         </p>
-        <ul style="color:#cbd5e1; font-size:14px; line-height:1.8; margin-bottom:0; padding-left:20px;">
+        <ul style="color:#f1f5f9; font-size:17.5px; line-height:2.2; margin-bottom:0; padding-left:24px;">
             <li><b>90% False Positives</b>: Flags bugs trapped behind private internal functions.</li>
             <li><b>Misses Multi-Hop Dispatches</b>: Cannot trace multi-step internal calls across functions.</li>
             <li><b>Zero Proof</b>: Produces theoretical alerts without execution or graph evidence.</li>
         </ul>
     </div>
-    <div style="margin-top:20px; padding:12px 16px; background:#1f2937; border-radius:8px; font-size:13px; color:#f87171;">
+    <div style="margin-top:28px; padding:16px 20px; background:#1f2937; border-radius:10px; font-size:16px; color:#f87171; font-weight:600;">
         ⚠️ <i>Weeks of manual auditor triage spent chasing unreachable warnings.</i>
     </div>
 </div>
@@ -525,28 +533,28 @@ if step == 0:
 
     with col_right:
         st.markdown('''
-<div class="deck-card" style="border-top: 4px solid #22c55e;">
+<div class="deck-card" style="border-top: 4px solid #22c55e; min-height: 480px; padding: 34px 38px;">
     <div>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-            <h2 style="margin:0; font-size:1.45rem; color:#4ade80;">✅ Audit-Chain Graph Intelligence</h2>
-            <span style="background:rgba(34,197,94,0.2); color:#86efac; padding:3px 10px; border-radius:12px; font-size:12px; font-weight:700;">CONNECTED DATA PROOFS</span>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h2 style="margin:0; font-size:1.85rem; color:#4ade80;">✅ Audit-Chain Graph Intelligence</h2>
+            <span style="background:rgba(34,197,94,0.25); color:#86efac; padding:6px 14px; border-radius:14px; font-size:13.5px; font-weight:700;">CONNECTED DATA PROOFS</span>
         </div>
-        <p style="color:#94a3b8; font-size:14.5px; margin-bottom:16px;">
+        <p style="color:#cbd5e1; font-size:18px; line-height:1.7; margin-bottom:20px;">
             Converts Solidity ASTs into FalkorDB in-memory graphs, mapping functions, state writes, and modifier guards.
         </p>
-        <ul style="color:#cbd5e1; font-size:14px; line-height:1.8; margin-bottom:0; padding-left:20px;">
+        <ul style="color:#f1f5f9; font-size:17.5px; line-height:2.2; margin-bottom:0; padding-left:24px;">
             <li><b>Multi-Hop Exploit Prover</b>: Finds unbroken paths from <code>msg.sender</code> down to sensitive sinks.</li>
             <li><b>The Verifier Gate</b>: Eliminates LLM hallucinations by mathematically checking graph topology.</li>
             <li><b>Automated Patching</b>: Synthesizes minimal fixes and proves the vulnerability route is gone.</li>
         </ul>
     </div>
-    <div style="margin-top:20px; padding:12px 16px; background:#14532d; border-radius:8px; font-size:13px; color:#86efac;">
+    <div style="margin-top:28px; padding:16px 20px; background:#14532d; border-radius:10px; font-size:16px; color:#86efac; font-weight:600;">
         🚀 <i>100% precision, 100% recall, and mathematical proof on benchmark exploits.</i>
     </div>
 </div>
 ''', unsafe_allow_html=True)
 
-    st.markdown('<div style="height:24px;"></div>', unsafe_allow_html=True)
+    st.markdown('<div style="height:28px;"></div>', unsafe_allow_html=True)
     _, col_btn, _ = st.columns([1, 1.8, 1])
     with col_btn:
         if st.button('🚀 Start Guided Walkthrough ➔', type='primary', use_container_width=True):
@@ -650,12 +658,12 @@ elif step == 2:
 
     # Clean, High-Contrast Legend Above Graph
     st.markdown('''
-<div style="background:#111827; border:1px solid #1f2937; border-radius:10px; padding:10px 18px; margin-bottom:12px; display:flex; justify-content:space-around; align-items:center; font-size:13.5px;">
+<div style="background:#111827; border:1px solid #1f2937; border-radius:10px; padding:12px 22px; margin-bottom:14px; display:flex; justify-content:space-around; align-items:center; font-size:15px; font-weight:600;">
     <span>🟢 <b>Public Entry Points</b> (Unauthenticated Attack Surface)</span>
     <span>⚡ <b>Internal Functions</b> (Call Dispatches)</span>
     <span>🔑 <b>Privileged Sinks</b> (Sensitive State: <code>owner</code>)</span>
     <span>💰 <b>State Variables</b> (<code>balances</code>)</span>
-    <span style="color:#94a3b8;"><i>💡 Drag nodes, zoom, or pan</i></span>
+    <span style="color:#94a3b8; font-weight:normal;"><i>💡 Drag nodes, zoom, or pan</i></span>
 </div>
 ''', unsafe_allow_html=True)
 
@@ -671,8 +679,8 @@ elif step == 2:
             tmp_path.unlink()
 
     # Giant High-Contrast Pure Graph Canvas (No browser chrome!)
-    pure_graph_html = render_pure_large_graph_html(g, height=580)
-    st.components.v1.html(pure_graph_html, height=590)
+    pure_graph_html = render_pure_large_graph_html(g, height=640)
+    st.components.v1.html(pure_graph_html, height=650)
 
     st.markdown('<div style="height:12px;"></div>', unsafe_allow_html=True)
     c_prev, c_next = st.columns([1, 1])
@@ -912,47 +920,47 @@ elif step == 6:
     col1, col2 = st.columns(2)
     with col1:
         st.markdown('''
-<div class="deck-card" style="border-top: 4px solid #38bdf8;">
+<div class="deck-card" style="border-top: 4px solid #38bdf8; min-height: 480px; padding: 34px 38px;">
     <div>
-        <h3 style="margin-top:0; color:#38bdf8; font-size:1.4rem;">Why Connected Data Transforms Auditing</h3>
-        <p style="color:#cbd5e1; font-size:14.5px; line-height:1.7;">
+        <h3 style="margin-top:0; color:#38bdf8; font-size:1.85rem;">Why Connected Data Transforms Auditing</h3>
+        <p style="color:#cbd5e1; font-size:18px; line-height:1.7; margin-bottom:20px;">
         By converting smart contracts from static text into FalkorDB in-memory knowledge graphs, Audit-Chain eliminates auditor fatigue:
         </p>
-        <ul style="color:#cbd5e1; font-size:14px; line-height:1.8; padding-left:20px;">
+        <ul style="color:#f1f5f9; font-size:17.5px; line-height:2.2; padding-left:24px;">
             <li><b>Zero Hallucinations</b>: The Verifier Gate blocks 100% of speculative LLM claims.</li>
             <li><b>Deep Multi-Hop Reachability</b>: Discovers vulnerabilities hidden behind internal dispatches.</li>
             <li><b>Automated Verified Remediation</b>: Synthesizes minimal patches with mathematical proof.</li>
         </ul>
     </div>
-    <div style="background:#0f172a; padding:12px 16px; border-radius:8px; margin-top:16px;">
+    <div style="background:#0f172a; padding:16px 20px; border-radius:10px; margin-top:24px; font-size:16px;">
         <span style="color:#38bdf8; font-weight:700;">100% Benchmark Accuracy:</span>
-        <span style="color:#94a3b8; font-size:13px;"> 100% precision, 100% recall, and 100% patch success.</span>
+        <span style="color:#cbd5e1;"> 100% precision, 100% recall, and 100% patch success.</span>
     </div>
 </div>
 ''', unsafe_allow_html=True)
 
     with col2:
         st.markdown('''
-<div class="deck-card" style="border-top: 4px solid #a855f7;">
+<div class="deck-card" style="border-top: 4px solid #a855f7; min-height: 480px; padding: 34px 38px;">
     <div>
-        <h3 style="margin-top:0; color:#c084fc; font-size:1.4rem;">Track 01: Agents on Connected Data</h3>
-        <p style="color:#cbd5e1; font-size:14.5px; line-height:1.7;">
+        <h3 style="margin-top:0; color:#c084fc; font-size:1.85rem;">Track 01: Agents on Connected Data</h3>
+        <p style="color:#cbd5e1; font-size:18px; line-height:1.7; margin-bottom:20px;">
         Audit-Chain demonstrates the power of autonomous AI agents coupled directly with graph databases:
         </p>
-        <ul style="color:#cbd5e1; font-size:14px; line-height:1.8; padding-left:20px;">
+        <ul style="color:#f1f5f9; font-size:17.5px; line-height:2.2; padding-left:24px;">
             <li><b>FalkorDB In-Memory Graph</b>: Ultra-low latency Cypher execution.</li>
             <li><b>FastMCP Protocol</b>: Type-safe, modular agent tool calling.</li>
             <li><b>Solidity 0.8.19 AST Compilation</b>: Real-world compiler integration.</li>
         </ul>
     </div>
-    <div style="background:#1e1b4b; padding:12px 16px; border-radius:8px; margin-top:16px;">
+    <div style="background:#1e1b4b; padding:16px 20px; border-radius:10px; margin-top:24px; font-size:16px;">
         <span style="color:#c084fc; font-weight:700;">GitHub Repository:</span>
         <a href="https://github.com/prze8969/Audit-chain" target="_blank" style="color:#38bdf8; font-weight:600; text-decoration:none; margin-left:8px;">github.com/prze8969/Audit-chain</a>
     </div>
 </div>
 ''', unsafe_allow_html=True)
 
-    st.markdown('<div style="height:24px;"></div>', unsafe_allow_html=True)
+    st.markdown('<div style="height:28px;"></div>', unsafe_allow_html=True)
     _, col_btn, _ = st.columns([1, 1.8, 1])
     with col_btn:
         if st.button('🔄 Restart Walkthrough from Step 0', type='primary', use_container_width=True):
