@@ -49,35 +49,84 @@ st.set_page_config(page_title='Audit-Chain | Autonomous Graph Security Agent', l
 st.title('🛡️ Audit-Chain: Autonomous Graph Security Agent')
 st.caption('Multi-Hop Attacker Reachability Prover, Verifier Gate & Automated Remediation Patcher powered by FalkorDB & MCP')
 
-st.sidebar.header('Audit Configuration')
-mode_choice = st.sidebar.radio('Execution Mode', ['offline', 'agent'], help='Offline deterministic baseline or autonomous MCP-driven LLM agent')
+st.sidebar.markdown('### ⚙️ **Audit Configuration**')
+st.sidebar.caption('Configure target smart contract & audit mode:')
 
-sample_type = st.sidebar.selectbox('Target Selection', ['Variant (samples/variants)', 'Held-out (samples/heldout)', 'Custom Upload'])
+st.sidebar.markdown('#### 🎯 **Step 1: Pick Contract**')
+sample_type = st.sidebar.selectbox(
+    'Target Source',
+    ['Variant (samples/variants)', 'Held-out (samples/heldout)', 'Custom Upload'],
+    help='Choose an existing vulnerability variant or upload your own single-file Solidity contract.'
+)
 
 sol_source = None
 target_name = 'custom'
 
+VARIANT_DESCRIPTIONS = {
+    'm7': 'm7 — Privileged Owner Overwrite (Multi-hop exploit)',
+    'm3': 'm3 — Classical Reentrancy (State updated after call)',
+    'm2': 'm2 — Missing Access Control (Direct unguarded write)',
+    'm1': 'm1 — Unprotected State Mutation',
+    'm4': 'm4 — Unguarded Selfdestruct',
+    'm5': 'm5 — Reentrancy in Token Transfer',
+    'm6': 'm6 — Unchecked Low-Level Call',
+    'clean': 'clean — Verified Secure Contract (No bugs)',
+}
+
+HELDOUT_DESCRIPTIONS = {
+    'h1': 'h1 — Multi-Hop Reentrancy Benchmark',
+    'h2': 'h2 — Complex Access Path Benchmark',
+    'h3': 'h3 — Guarded Write Invalidation Benchmark',
+    'h4': 'h4 — Deep Call-Chain Bypass Benchmark',
+}
+
 if sample_type == 'Variant (samples/variants)':
-    variant_options = ['clean', 'm1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7']
-    chosen_var = st.sidebar.selectbox('Choose Variant', variant_options, index=7)
+    chosen_var = st.sidebar.selectbox(
+        'Choose Variant',
+        list(VARIANT_DESCRIPTIONS.keys()),
+        index=7,
+        format_func=lambda k: VARIANT_DESCRIPTIONS[k],
+        help='Select a contract variant to analyze.'
+    )
     target_name = chosen_var
     sol_file = Path(f'samples/variants/{chosen_var}.sol')
     if sol_file.exists():
         sol_source = sol_file.read_text(encoding='utf-8')
+
 elif sample_type == 'Held-out (samples/heldout)':
-    held_options = ['h1', 'h2', 'h3', 'h4']
-    chosen_held = st.sidebar.selectbox('Choose Held-out Contract', held_options, index=0)
+    chosen_held = st.sidebar.selectbox(
+        'Choose Held-out Contract',
+        list(HELDOUT_DESCRIPTIONS.keys()),
+        index=0,
+        format_func=lambda k: HELDOUT_DESCRIPTIONS[k],
+        help='Held-out test contracts evaluated across benchmark rounds.'
+    )
     target_name = chosen_held
     sol_file = Path(f'samples/heldout/{chosen_held}.sol')
     if sol_file.exists():
         sol_source = sol_file.read_text(encoding='utf-8')
 else:
-    uploaded = st.sidebar.file_uploader('Upload Solidity File (.sol)', type=['sol'])
+    uploaded = st.sidebar.file_uploader('Upload Solidity File (.sol)', type=['sol'], help='Max 20 KB, pragma 0.8.19')
     if uploaded:
         sol_source = uploaded.getvalue().decode('utf-8')
         target_name = Path(uploaded.name).stem
 
-run_btn = st.sidebar.button('🚀 Run Audit Pipeline', type='primary')
+st.sidebar.markdown('#### 🤖 **Step 2: Execution Mode**')
+mode_choice = st.sidebar.radio(
+    'Execution Engine',
+    ['offline', 'agent'],
+    format_func=lambda m: '⚡ Deterministic Offline (Fast Cypher Engine)' if m == 'offline' else '🧠 Autonomous Agent (OpenAI/Qwen + FastMCP)',
+    help='Offline performs instant deterministic graph reachability analysis; Agent runs autonomous multi-tool MCP investigation.'
+)
+
+st.sidebar.markdown('#### 🚀 **Step 3: Run Audit**')
+run_btn = st.sidebar.button('🚀 Run Audit Pipeline', type='primary', use_container_width=True)
+
+st.sidebar.divider()
+st.sidebar.markdown('##### 🖥️ **System Status**')
+st.sidebar.markdown('🟢 **Database**: FalkorDB (Port 6379)')
+st.sidebar.markdown('🟢 **Compiler**: solc 0.8.19')
+st.sidebar.caption('FalkorDB Browser: `http://localhost:3000`')
 
 if 'report' not in st.session_state:
     st.session_state['report'] = None
@@ -147,20 +196,47 @@ with tabs[0]:
         st.info('Select a contract variant in the sidebar and click "Run Audit Pipeline" to analyze.')
 
 with tabs[1]:
-    st.subheader('Multi-Hop Attacker Reachability Visualization')
+    st.subheader('🎯 Multi-Hop Attacker Reachability Proof')
+    st.caption('Mathematically proven path from an unauthenticated external entry into a privileged sink.')
     report = st.session_state.get('report')
     if report and report.findings:
-        finding_opts = [f'{f.klass}: {f.function_id}' for f in report.findings]
-        selected_idx = st.selectbox('Select Finding to Inspect Call Path', range(len(finding_opts)), format_func=lambda i: finding_opts[i])
+        finding_opts = [f'[{f.klass}] {f.function_id} ({f.severity}) ➔ Sink: {f.sink or "Control Flow"}' for f in report.findings]
+        selected_idx = st.selectbox('Select Vulnerability Finding to Inspect:', range(len(finding_opts)), format_func=lambda i: finding_opts[i])
         selected_f = report.findings[selected_idx]
 
-        interactive_path = render_interactive_path_html(selected_f.path, selected_f.sink, height=280)
-        st.components.v1.html(interactive_path, height=310)
+        # Detailed exploit narrative card
+        col_summary, col_path_stats = st.columns([2, 1])
+        with col_summary:
+            st.markdown(f"**Vulnerability**: `{selected_f.title}` &nbsp;|&nbsp; **Target**: `{selected_f.function_id}`")
+            st.markdown(f"**How the exploit occurs**: {selected_f.explanation}")
+        with col_path_stats:
+            st.metric('Exploit Path Length', f"{len(selected_f.path)} Hops", delta='Attacker Reachable' if selected_f.reachable else 'Unreachable', delta_color='inverse' if selected_f.reachable else 'normal')
 
-        with st.expander('Formal Cypher Proof'):
+        st.markdown('---')
+        
+        # Step-by-Step Path Flow
+        if selected_f.path:
+            st.markdown('**Step-by-Step Exploit Route:**')
+            flow_cols = st.columns(len(selected_f.path) + (1 if selected_f.sink else 0))
+            for i, hop in enumerate(selected_f.path):
+                with flow_cols[i]:
+                    if i == 0:
+                        st.success(f"**1. Attacker Entry**\n\n`{hop}`\n\n*(Public/External)*")
+                    else:
+                        st.error(f"**{i+1}. Internal Dispatch**\n\n`{hop}`\n\n*(Private/Internal)*")
+            if selected_f.sink:
+                with flow_cols[-1]:
+                    st.warning(f"**⚠️ Mutates State**\n\n`{selected_f.sink}`\n\n*(Privileged Var)*")
+
+        st.markdown('<div style="height: 10px;"></div>', unsafe_allow_html=True)
+        st.markdown('**Interactive Call Graph:** *(Drag nodes or scroll to zoom)*')
+        interactive_path = render_interactive_path_html(selected_f.path, selected_f.sink, height=320)
+        st.components.v1.html(interactive_path, height=350)
+
+        with st.expander('Formal Cypher Reachability Proof'):
             st.code(selected_f.evidence_cypher or 'MATCH p=(e:Function {is_entry:true, guarded:false})-[:CALLS*1..6]->(t) RETURN p', language='cypher')
     else:
-        st.info('Run an audit with detected findings to view call-graph reachability paths.')
+        st.info('Select a contract variant in the sidebar and click "Run Audit Pipeline" to analyze.')
 
 with tabs[2]:
     st.subheader('🔮 FalkorDB Code Knowledge Graph')

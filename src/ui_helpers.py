@@ -74,23 +74,25 @@ def render_interactive_path_html(path: list[str], sink: str = '', height: int = 
         })
     else:
         for i, node_name in enumerate(path):
+            short_fn = node_name.split('(')[0]
+            params = f"({node_name.split('(')[1]}" if '(' in node_name else ""
             if i == 0:
                 nodes.append({
                     'id': node_name,
-                    'label': f"▶ {node_name}\n(Attacker Entry)",
+                    'label': f"🔓 ATTACKER ENTRY\n{short_fn}{params}\n[Public / Unauthenticated]",
                     'color': {'background': '#15803d', 'border': '#22c55e', 'highlight': {'background': '#16a34a', 'border': '#4ade80'}},
-                    'font': {'color': '#ffffff', 'face': 'Inter, system-ui, sans-serif', 'bold': True},
+                    'font': {'color': '#ffffff', 'face': 'Inter, system-ui, sans-serif', 'size': 14, 'bold': True},
                     'shape': 'box',
-                    'margin': 10
+                    'margin': 14
                 })
             else:
                 nodes.append({
                     'id': node_name,
-                    'label': f"{node_name}\n(Internal Hop)",
+                    'label': f"⚡ INTERNAL CALL\n{short_fn}{params}\n[Dispatched Function]",
                     'color': {'background': '#1e293b', 'border': '#ef4444', 'highlight': {'background': '#334155', 'border': '#f87171'}},
-                    'font': {'color': '#f87171', 'face': 'Inter, system-ui, sans-serif'},
+                    'font': {'color': '#fca5a5', 'face': 'Inter, system-ui, sans-serif', 'size': 13},
                     'shape': 'box',
-                    'margin': 10
+                    'margin': 14
                 })
 
         for i in range(len(path) - 1):
@@ -98,30 +100,30 @@ def render_interactive_path_html(path: list[str], sink: str = '', height: int = 
                 'from': path[i],
                 'to': path[i+1],
                 'label': 'CALLS',
-                'arrows': 'to',
+                'arrows': {'to': {'enabled': True, 'scaleFactor': 1.1}},
                 'color': {'color': '#ef4444', 'highlight': '#f87171'},
-                'font': {'color': '#cbd5e1', 'size': 11, 'align': 'middle'},
-                'width': 2.5
+                'font': {'color': '#fca5a5', 'size': 12, 'align': 'middle', 'strokeWidth': 3, 'strokeColor': '#080c14'},
+                'width': 3
             })
 
         if sink:
             nodes.append({
                 'id': sink,
-                'label': f"⚠️ {sink}\n(Privileged Var)",
+                'label': f"⚠️ PRIVILEGED SINK\n{sink}\n[Storage Mutated!]",
                 'color': {'background': '#c2410c', 'border': '#ea580c', 'highlight': {'background': '#ea580c', 'border': '#fb923c'}},
-                'font': {'color': '#ffffff', 'face': 'Inter, system-ui, sans-serif', 'bold': True},
+                'font': {'color': '#ffffff', 'face': 'Inter, system-ui, sans-serif', 'size': 14, 'bold': True},
                 'shape': 'box',
-                'margin': 10
+                'margin': 14
             })
             edges.append({
                 'from': path[-1],
                 'to': sink,
                 'label': 'WRITES',
-                'arrows': 'to',
+                'arrows': {'to': {'enabled': True, 'scaleFactor': 1.1}},
                 'dashes': True,
                 'color': {'color': '#f97316', 'highlight': '#fb923c'},
-                'font': {'color': '#fb923c', 'size': 11, 'align': 'middle'},
-                'width': 2.5
+                'font': {'color': '#fdba74', 'size': 12, 'align': 'middle', 'strokeWidth': 3, 'strokeColor': '#080c14'},
+                'width': 3.5
             })
 
     nodes_json = json.dumps(nodes)
@@ -136,7 +138,7 @@ def render_interactive_path_html(path: list[str], sink: str = '', height: int = 
       <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{
-          background: #0b0f19;
+          background: #080c14;
           color: #e2e8f0;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
           overflow: hidden;
@@ -146,24 +148,25 @@ def render_interactive_path_html(path: list[str], sink: str = '', height: int = 
           height: {height}px;
           border: 1px solid #1e293b;
           border-radius: 8px;
-          background: #080c14;
+          background: #0b0f19;
         }}
         .controls-hint {{
           position: absolute;
-          bottom: 8px;
-          right: 12px;
+          bottom: 10px;
+          right: 14px;
           font-size: 11px;
-          color: #64748b;
-          background: rgba(15, 23, 42, 0.7);
-          padding: 2px 6px;
-          border-radius: 4px;
+          color: #94a3b8;
+          background: rgba(15, 23, 42, 0.85);
+          padding: 4px 10px;
+          border-radius: 6px;
+          border: 1px solid #334155;
           pointer-events: none;
         }}
       </style>
     </head>
     <body>
       <div id="mynetwork"></div>
-      <div class="controls-hint">🖱️ Drag to pan • Scroll to zoom • Drag nodes</div>
+      <div class="controls-hint">🖱️ Drag nodes to arrange • Scroll to zoom • Drag background to pan</div>
       <script type="text/javascript">
         var container = document.getElementById('mynetwork');
         var data = {{
@@ -176,9 +179,9 @@ def render_interactive_path_html(path: list[str], sink: str = '', height: int = 
               enabled: true,
               direction: 'LR',
               sortMethod: 'directed',
-              levelSeparation: 180,
-              nodeSpacing: 120,
-              treeSpacing: 100,
+              levelSeparation: 260,
+              nodeSpacing: 180,
+              treeSpacing: 160,
               blockShifting: true,
               edgeMinimization: true,
               parentCentralization: true
@@ -187,10 +190,10 @@ def render_interactive_path_html(path: list[str], sink: str = '', height: int = 
           physics: {{
             hierarchicalRepulsion: {{
               centralGravity: 0.0,
-              springLength: 120,
+              springLength: 180,
               springConstant: 0.01,
-              nodeDistance: 140,
-              damping: 0.09
+              nodeDistance: 220,
+              damping: 0.1
             }},
             solver: 'hierarchicalRepulsion'
           }},
@@ -204,8 +207,8 @@ def render_interactive_path_html(path: list[str], sink: str = '', height: int = 
             borderWidth: 2,
             shadow: {{
               enabled: true,
-              color: 'rgba(0,0,0,0.5)',
-              size: 8,
+              color: 'rgba(0,0,0,0.6)',
+              size: 10,
               x: 2,
               y: 2
             }}
@@ -214,7 +217,7 @@ def render_interactive_path_html(path: list[str], sink: str = '', height: int = 
             smooth: {{
               type: 'cubicBezier',
               forceDirection: 'horizontal',
-              roundness: 0.4
+              roundness: 0.35
             }}
           }}
         }};
@@ -229,7 +232,7 @@ def render_interactive_path_html(path: list[str], sink: str = '', height: int = 
         }});
         setTimeout(function() {{
           network.fit();
-        }}, 150);
+        }}, 200);
       </script>
     </body>
     </html>
