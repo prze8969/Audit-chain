@@ -176,12 +176,23 @@ def render_interactive_path_html(path: list[str], sink: str = '', height: int = 
               enabled: true,
               direction: 'LR',
               sortMethod: 'directed',
-              levelSeparation: 160,
-              nodeSpacing: 100
+              levelSeparation: 180,
+              nodeSpacing: 120,
+              treeSpacing: 100,
+              blockShifting: true,
+              edgeMinimization: true,
+              parentCentralization: true
             }}
           }},
           physics: {{
-            enabled: false
+            hierarchicalRepulsion: {{
+              centralGravity: 0.0,
+              springLength: 120,
+              springConstant: 0.01,
+              nodeDistance: 140,
+              damping: 0.09
+            }},
+            solver: 'hierarchicalRepulsion'
           }},
           interaction: {{
             hover: true,
@@ -203,12 +214,22 @@ def render_interactive_path_html(path: list[str], sink: str = '', height: int = 
             smooth: {{
               type: 'cubicBezier',
               forceDirection: 'horizontal',
-              roundness: 0.3
+              roundness: 0.4
             }}
           }}
         }};
         var network = new vis.Network(container, data, options);
-        network.fit();
+        network.once('stabilizationIterationsDone', function() {{
+          network.fit({{
+            animation: {{ duration: 400, easingFunction: 'easeInOutQuad' }}
+          }});
+        }});
+        network.once('afterDrawing', function() {{
+          network.fit();
+        }});
+        setTimeout(function() {{
+          network.fit();
+        }}, 150);
       </script>
     </body>
     </html>
@@ -401,6 +422,17 @@ def render_interactive_full_graph_html(g, height: int = 480) -> str:
           }}
         }};
         var network = new vis.Network(container, data, options);
+        network.once('stabilizationIterationsDone', function() {{
+          network.fit({{
+            animation: {{ duration: 500, easingFunction: 'easeInOutQuad' }}
+          }});
+        }});
+        network.once('afterDrawing', function() {{
+          network.fit();
+        }});
+        setTimeout(function() {{
+          network.fit();
+        }}, 200);
       </script>
     </body>
     </html>
