@@ -246,60 +246,72 @@ def render_interactive_full_graph_html(g, height: int = 480) -> str:
         fn_rows = g.query("MATCH (f:Function) RETURN f.id, f.is_entry, f.guarded, f.visibility").result_set
         for row in fn_rows:
             f_id, is_entry, guarded, vis = row[0], row[1], row[2], row[3]
+            short_label = f_id.split('(')[0].split('.')[-1]
             if is_entry and not guarded:
+                # Green = Function / Entry
                 nodes.append({
                     'id': f_id,
-                    'label': f"▶ {f_id}\n[Entry]",
-                    'title': f"Public Entry Point: {f_id} (Unauthenticated/Unguarded)",
-                    'color': {'background': '#15803d', 'border': '#22c55e', 'highlight': {'background': '#16a34a', 'border': '#4ade80'}},
-                    'font': {'color': '#ffffff', 'face': 'Inter, system-ui, sans-serif'},
-                    'shape': 'box',
-                    'margin': 8
+                    'label': short_label,
+                    'title': f"<b>Function (Entry)</b>: {f_id}<br>Visibility: {vis}<br>Guarded: False",
+                    'color': {'background': '#22c55e', 'border': '#16a34a', 'highlight': {'background': '#4ade80', 'border': '#22c55e'}},
+                    'font': {'color': '#ffffff', 'size': 12, 'face': 'Inter, system-ui, sans-serif', 'strokeWidth': 2, 'strokeColor': '#000000'},
+                    'shape': 'dot',
+                    'size': 20,
+                    'group': 'FunctionEntry'
                 })
             elif guarded:
+                # Blue = Guarded Function
                 nodes.append({
                     'id': f_id,
-                    'label': f"🛡️ {f_id}\n[Guarded]",
-                    'title': f"Protected Function: {f_id} (Access controlled)",
-                    'color': {'background': '#1e3a8a', 'border': '#3b82f6', 'highlight': {'background': '#2563eb', 'border': '#60a5fa'}},
-                    'font': {'color': '#ffffff', 'face': 'Inter, system-ui, sans-serif'},
-                    'shape': 'box',
-                    'margin': 8
+                    'label': short_label,
+                    'title': f"<b>Function (Guarded)</b>: {f_id}<br>Guarded: True",
+                    'color': {'background': '#3b82f6', 'border': '#1d4ed8', 'highlight': {'background': '#60a5fa', 'border': '#2563eb'}},
+                    'font': {'color': '#ffffff', 'size': 12, 'face': 'Inter, system-ui, sans-serif', 'strokeWidth': 2, 'strokeColor': '#000000'},
+                    'shape': 'dot',
+                    'size': 20,
+                    'group': 'FunctionGuarded'
                 })
             else:
+                # Purple / Magenta = Internal Function (matching FalkorDB browser Function label)
                 nodes.append({
                     'id': f_id,
-                    'label': f"{f_id}\n[Internal]",
-                    'title': f"Internal Function: {f_id}",
-                    'color': {'background': '#1e293b', 'border': '#475569', 'highlight': {'background': '#334155', 'border': '#94a3b8'}},
-                    'font': {'color': '#cbd5e1', 'face': 'Inter, system-ui, sans-serif'},
-                    'shape': 'box',
-                    'margin': 8
+                    'label': short_label,
+                    'title': f"<b>Function (Internal)</b>: {f_id}",
+                    'color': {'background': '#c084fc', 'border': '#9333ea', 'highlight': {'background': '#d8b4fe', 'border': '#a855f7'}},
+                    'font': {'color': '#ffffff', 'size': 12, 'face': 'Inter, system-ui, sans-serif', 'strokeWidth': 2, 'strokeColor': '#000000'},
+                    'shape': 'dot',
+                    'size': 18,
+                    'group': 'FunctionInternal'
                 })
 
         # State Variables
         var_rows = g.query("MATCH (v:StateVar) RETURN v.id, v.privileged").result_set
         for row in var_rows:
             v_id, priv = row[0], row[1]
+            short_var = v_id.split('.')[-1]
             if priv:
+                # Orange = Privileged StateVar
                 nodes.append({
                     'id': v_id,
-                    'label': f"⚠️ {v_id}\n[Privileged Var]",
-                    'title': f"Privileged State Variable: {v_id}",
-                    'color': {'background': '#c2410c', 'border': '#ea580c', 'highlight': {'background': '#ea580c', 'border': '#fb923c'}},
-                    'font': {'color': '#ffffff', 'face': 'Inter, system-ui, sans-serif'},
-                    'shape': 'box',
-                    'margin': 8
+                    'label': short_var,
+                    'title': f"<b>Privileged StateVar</b>: {v_id}",
+                    'color': {'background': '#f97316', 'border': '#c2410c', 'highlight': {'background': '#fb923c', 'border': '#ea580c'}},
+                    'font': {'color': '#ffffff', 'size': 13, 'face': 'Inter, system-ui, sans-serif', 'strokeWidth': 2, 'strokeColor': '#000000'},
+                    'shape': 'dot',
+                    'size': 24,
+                    'group': 'PrivilegedVar'
                 })
             else:
+                # Slate / Cyan = StateVar
                 nodes.append({
                     'id': v_id,
-                    'label': f"{v_id}\n[StateVar]",
-                    'title': f"State Variable: {v_id}",
-                    'color': {'background': '#0f172a', 'border': '#334155', 'highlight': {'background': '#1e293b', 'border': '#64748b'}},
-                    'font': {'color': '#94a3b8', 'face': 'Inter, system-ui, sans-serif'},
-                    'shape': 'box',
-                    'margin': 8
+                    'label': short_var,
+                    'title': f"<b>StateVar</b>: {v_id}",
+                    'color': {'background': '#06b6d4', 'border': '#0891b2', 'highlight': {'background': '#22d3ee', 'border': '#06b6d4'}},
+                    'font': {'color': '#ffffff', 'size': 11, 'face': 'Inter, system-ui, sans-serif', 'strokeWidth': 2, 'strokeColor': '#000000'},
+                    'shape': 'dot',
+                    'size': 16,
+                    'group': 'StateVar'
                 })
 
         # CALLS Edges
@@ -309,10 +321,10 @@ def render_interactive_full_graph_html(g, height: int = 480) -> str:
                 'from': row[0],
                 'to': row[1],
                 'label': 'CALLS',
-                'arrows': 'to',
-                'color': {'color': '#ef4444', 'highlight': '#f87171'},
-                'font': {'color': '#94a3b8', 'size': 10, 'align': 'middle'},
-                'width': 2
+                'arrows': {'to': {'enabled': True, 'scaleFactor': 0.7}},
+                'color': {'color': '#ec4899', 'highlight': '#f472b6'},
+                'font': {'color': '#94a3b8', 'size': 9, 'align': 'middle'},
+                'width': 1.5
             })
 
         # WRITES Edges
@@ -322,23 +334,27 @@ def render_interactive_full_graph_html(g, height: int = 480) -> str:
                 'from': row[0],
                 'to': row[1],
                 'label': 'WRITES',
-                'arrows': 'to',
+                'arrows': {'to': {'enabled': True, 'scaleFactor': 0.7}},
                 'dashes': True,
                 'color': {'color': '#f97316', 'highlight': '#fb923c'},
-                'font': {'color': '#fb923c', 'size': 10, 'align': 'middle'},
+                'font': {'color': '#fb923c', 'size': 9, 'align': 'middle'},
                 'width': 2
             })
 
     except Exception as err:
         nodes.append({
             'id': 'error',
-            'label': f"Error reading graph: {err}",
+            'label': f"Error: {err}",
             'color': {'background': '#7f1d1d', 'border': '#ef4444'},
-            'font': {'color': '#fca5a5'}
+            'font': {'color': '#fca5a5'},
+            'shape': 'dot',
+            'size': 15
         })
 
     nodes_json = json.dumps(nodes)
     edges_json = json.dumps(edges)
+    node_count = len(nodes)
+    edge_count = len(edges)
 
     return f"""
     <!DOCTYPE html>
@@ -349,34 +365,119 @@ def render_interactive_full_graph_html(g, height: int = 480) -> str:
       <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{
-          background: #0b0f19;
+          background: #0f131d;
           color: #e2e8f0;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
           overflow: hidden;
         }}
-        #mynetwork {{
-          width: 100%;
-          height: {height}px;
+        .browser-container {{
           border: 1px solid #1e293b;
           border-radius: 8px;
-          background: #080c14;
+          background: #0b0f19;
+          position: relative;
+          width: 100%;
+          height: {height}px;
+          display: flex;
+          flex-direction: column;
         }}
-        .controls-hint {{
-          position: absolute;
-          bottom: 10px;
-          right: 14px;
-          font-size: 11px;
-          color: #64748b;
-          background: rgba(15, 23, 42, 0.75);
+        .falkor-bar {{
+          background: #141a29;
+          border-bottom: 1px solid #1e293b;
+          padding: 8px 12px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          font-size: 12px;
+        }}
+        .query-box {{
+          background: #090d16;
+          border: 1px solid #334155;
+          border-radius: 4px;
+          color: #38bdf8;
+          font-family: monospace;
+          font-size: 12px;
+          padding: 4px 10px;
+          flex-grow: 1;
+        }}
+        .falkor-badge {{
+          background: #2563eb;
+          color: #ffffff;
+          font-weight: 600;
           padding: 3px 8px;
           border-radius: 4px;
+          font-size: 11px;
+        }}
+        .graph-workspace {{
+          flex-grow: 1;
+          position: relative;
+          width: 100%;
+          height: calc(100% - 75px);
+        }}
+        #mynetwork {{
+          width: 100%;
+          height: 100%;
+        }}
+        .falkor-legend {{
+          position: absolute;
+          top: 10px;
+          left: 12px;
+          background: rgba(15, 23, 42, 0.85);
+          backdrop-filter: blur(4px);
+          border: 1px solid #1e293b;
+          border-radius: 6px;
+          padding: 8px 10px;
+          font-size: 11px;
           pointer-events: none;
+          z-index: 10;
+        }}
+        .legend-item {{
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-bottom: 4px;
+        }}
+        .legend-item:last-child {{ margin-bottom: 0; }}
+        .dot {{
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+        }}
+        .falkor-footer {{
+          background: #141a29;
+          border-top: 1px solid #1e293b;
+          padding: 6px 12px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-size: 11px;
+          color: #94a3b8;
         }}
       </style>
     </head>
     <body>
-      <div id="mynetwork"></div>
-      <div class="controls-hint">🖱️ Drag to pan • Scroll to zoom • Drag nodes freely</div>
+      <div class="browser-container">
+        <div class="falkor-bar">
+          <span class="falkor-badge">FalkorDB</span>
+          <div class="query-box">MATCH (n) OPTIONAL MATCH (n)-[r]->(m) RETURN * LIMIT 100</div>
+        </div>
+
+        <div class="graph-workspace">
+          <div class="falkor-legend">
+            <div class="legend-item"><span class="dot" style="background: #22c55e;"></span> Entry Function</div>
+            <div class="legend-item"><span class="dot" style="background: #c084fc;"></span> Internal Function</div>
+            <div class="legend-item"><span class="dot" style="background: #3b82f6;"></span> Guarded Function</div>
+            <div class="legend-item"><span class="dot" style="background: #f97316;"></span> Privileged StateVar</div>
+            <div class="legend-item"><span class="dot" style="background: #06b6d4;"></span> StateVar</div>
+          </div>
+          <div id="mynetwork"></div>
+        </div>
+
+        <div class="falkor-footer">
+          <span>Nodes: <b>{node_count}</b> &nbsp;|&nbsp; Edges: <b>{edge_count}</b></span>
+          <span>🖱️ Click & Drag Nodes • Scroll to Zoom • Pan Canvas</span>
+        </div>
+      </div>
+
       <script type="text/javascript">
         var container = document.getElementById('mynetwork');
         var data = {{
@@ -388,53 +489,46 @@ def render_interactive_full_graph_html(g, height: int = 480) -> str:
             enabled: true,
             solver: 'barnesHut',
             barnesHut: {{
-              gravitationalConstant: -12000,
+              gravitationalConstant: -18000,
               centralGravity: 0.15,
-              springLength: 220,
+              springLength: 200,
               springConstant: 0.04,
-              damping: 0.3,
+              damping: 0.25,
               avoidOverlap: 1
             }},
             stabilization: {{
               enabled: true,
-              iterations: 250,
+              iterations: 200,
               fit: true
             }}
           }},
-          layout: {{
-            improvedLayout: true,
-            randomSeed: 42
-          }},
           interaction: {{
             hover: true,
-            tooltipDelay: 100,
+            tooltipDelay: 50,
             dragNodes: true,
             dragView: true,
             zoomView: true
           }},
           nodes: {{
             borderWidth: 2,
-            margin: {{ top: 10, bottom: 10, left: 14, right: 14 }},
             shadow: {{
               enabled: true,
-              color: 'rgba(0,0,0,0.4)',
-              size: 6,
-              x: 2,
-              y: 2
+              color: 'rgba(0,0,0,0.5)',
+              size: 5,
+              x: 1,
+              y: 1
             }}
           }},
           edges: {{
             smooth: {{
-              type: 'cubicBezier',
-              forceDirection: 'none',
-              roundness: 0.2
+              type: 'continuous'
             }}
           }}
         }};
         var network = new vis.Network(container, data, options);
         network.once('stabilizationIterationsDone', function() {{
           network.fit({{
-            animation: {{ duration: 400, easingFunction: 'easeInOutQuad' }}
+            animation: {{ duration: 500, easingFunction: 'easeInOutQuad' }}
           }});
         }});
         network.once('afterDrawing', function() {{
