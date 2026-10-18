@@ -1,0 +1,134 @@
+[
+  {
+    "variant": "clean",
+    "expected": []
+  },
+  {
+    "variant": "m1",
+    "expected": [
+      {
+        "klass": "P",
+        "function_id": "Treasury.setOwner(address)",
+        "var": "Treasury.owner",
+        "path": [
+          "Treasury.setOwner(address)"
+        ]
+      }
+    ]
+  },
+  {
+    "variant": "m2",
+    "expected": [
+      {
+        "klass": "P",
+        "function_id": "Treasury._grant(address)",
+        "var": "Treasury.owner",
+        "path": [
+          "Treasury.handOver(address)",
+          "Treasury._grant(address)"
+        ]
+      }
+    ]
+  },
+  {
+    "variant": "m3",
+    "expected": [
+      {
+        "klass": "R",
+        "function_id": "Treasury.withdraw(uint256)",
+        "path": [
+          "Treasury.withdraw(uint256)"
+        ]
+      }
+    ]
+  },
+  {
+    "variant": "m4",
+    "expected": [
+      {
+        "klass": "U",
+        "function_id": "Treasury.refund(uint256)",
+        "path": [
+          "Treasury.refund(uint256)"
+        ]
+      }
+    ]
+  },
+  {
+    "variant": "m5",
+    "expected": [
+      {
+        "klass": "P",
+        "function_id": "Treasury.setOwner(address)",
+        "var": "Treasury.owner",
+        "path": [
+          "Treasury.setOwner(address)"
+        ]
+      },
+      {
+        "klass": "R",
+        "function_id": "Treasury.withdraw(uint256)",
+        "path": [
+          "Treasury.withdraw(uint256)"
+        ]
+      }
+    ]
+  },
+  {
+    "variant": "m6",
+    "expected": [
+      {
+        "klass": "P",
+        "function_id": "Treasury._grant(address)",
+        "var": "Treasury.owner",
+        "path": [
+          "Treasury.handOver(address)",
+          "Treasury._grant(address)"
+        ]
+      },
+      {
+        "klass": "U",
+        "function_id": "Treasury.refund(uint256)",
+        "path": [
+          "Treasury.refund(uint256)"
+        ]
+      }
+    ]
+  },
+  {
+    "variant": "m7",
+    "expected": [
+      {
+        "klass": "P",
+        "function_id": "Treasury.setOwner(address)",
+        "var": "Treasury.owner",
+        "path": [
+          "Treasury.setOwner(address)"
+        ]
+      },
+      {
+        "klass": "P",
+        "function_id": "Treasury._grant(address)",
+        "var": "Treasury.owner",
+        "path": [
+          "Treasury.handOver(address)",
+          "Treasury._grant(address)"
+        ]
+      },
+      {
+        "klass": "R",
+        "function_id": "Treasury.withdraw(uint256)",
+        "path": [
+          "Treasury.withdraw(uint256)"
+        ]
+      },
+      {
+        "klass": "U",
+        "function_id": "Treasury.refund(uint256)",
+        "path": [
+          "Treasury.refund(uint256)"
+        ]
+      }
+    ]
+  }
+]
