@@ -386,17 +386,24 @@ def render_interactive_full_graph_html(g, height: int = 480) -> str:
         var options = {{
           physics: {{
             enabled: true,
-            solver: 'forceAtlas2Based',
-            forceAtlas2Based: {{
-              gravitationalConstant: -40,
-              centralGravity: 0.01,
-              springLength: 120,
-              springConstant: 0.08,
-              damping: 0.4
+            solver: 'barnesHut',
+            barnesHut: {{
+              gravitationalConstant: -12000,
+              centralGravity: 0.15,
+              springLength: 220,
+              springConstant: 0.04,
+              damping: 0.3,
+              avoidOverlap: 1
             }},
             stabilization: {{
-              iterations: 150
+              enabled: true,
+              iterations: 250,
+              fit: true
             }}
+          }},
+          layout: {{
+            improvedLayout: true,
+            randomSeed: 42
           }},
           interaction: {{
             hover: true,
@@ -407,6 +414,7 @@ def render_interactive_full_graph_html(g, height: int = 480) -> str:
           }},
           nodes: {{
             borderWidth: 2,
+            margin: {{ top: 10, bottom: 10, left: 14, right: 14 }},
             shadow: {{
               enabled: true,
               color: 'rgba(0,0,0,0.4)',
@@ -417,14 +425,16 @@ def render_interactive_full_graph_html(g, height: int = 480) -> str:
           }},
           edges: {{
             smooth: {{
-              type: 'continuous'
+              type: 'cubicBezier',
+              forceDirection: 'none',
+              roundness: 0.2
             }}
           }}
         }};
         var network = new vis.Network(container, data, options);
         network.once('stabilizationIterationsDone', function() {{
           network.fit({{
-            animation: {{ duration: 500, easingFunction: 'easeInOutQuad' }}
+            animation: {{ duration: 400, easingFunction: 'easeInOutQuad' }}
           }});
         }});
         network.once('afterDrawing', function() {{
@@ -432,7 +442,7 @@ def render_interactive_full_graph_html(g, height: int = 480) -> str:
         }});
         setTimeout(function() {{
           network.fit();
-        }}, 200);
+        }}, 300);
       </script>
     </body>
     </html>
