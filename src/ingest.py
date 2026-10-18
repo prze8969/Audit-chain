@@ -28,14 +28,9 @@ def is_fn_guarded(fn) -> bool:
     if any(GUARD_RE.search(m) for m in mod_names):
         return True
     try:
-        if fn.is_protected():
+        cond_vars = fn.all_conditional_solidity_variables_read(include_loop=False)
+        if any(getattr(v, 'name', '') == 'msg.sender' for v in cond_vars):
             return True
-    except Exception:
-        pass
-    try:
-        for v in fn.all_conditional_solidity_variables_read():
-            if getattr(v, 'name', '') == 'msg.sender':
-                return True
     except Exception:
         pass
     return False

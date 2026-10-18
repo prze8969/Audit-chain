@@ -65,5 +65,14 @@ def rank_findings() -> str:
     return json.dumps(tools.rank_findings(G()))
 
 
+if os.environ.get('MEMORY') == '1':
+    from src import memory
+
+    @mcp.tool()
+    def recall_fixes(klass: str, top_n: int = 3) -> str:
+        '''Recall past successful patches and fixes for a vulnerability class from the memory graph.'''
+        return json.dumps(memory.recall_fixes(klass, top_n))
+
+
 if __name__ == '__main__':
     mcp.run(transport='stdio')
