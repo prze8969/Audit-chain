@@ -293,68 +293,80 @@ st.markdown('''
         color: #e2e8f0;
     }
 
-    /* Keep main container centered on ultrawide screens */
+    header[data-testid="stHeader"] {
+        background: transparent !important;
+        height: 2rem !important;
+    }
+
+    /* Responsive container for all screen sizes */
     .block-container {
-        padding-top: 1.2rem !important;
-        padding-bottom: 1rem !important;
-        max-width: 1450px !important;
+        padding-top: 3.5rem !important;
+        padding-bottom: 2rem !important;
+        max-width: min(1400px, 94vw) !important;
         margin: 0 auto !important;
     }
 
-    /* Popout Slim Sidebar */
+    /* Fixed Icon Dock Sidebar - No overflowing text */
     [data-testid="stSidebar"] {
-        min-width: 65px !important;
-        max-width: 65px !important;
+        min-width: 76px !important;
+        max-width: 76px !important;
         background: #080c14 !important;
         border-right: 1px solid #1e293b !important;
-        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        overflow-x: hidden !important;
+        overflow: hidden !important;
         z-index: 9999 !important;
-    }
-    [data-testid="stSidebar"]:hover {
-        min-width: 215px !important;
-        max-width: 215px !important;
-        box-shadow: 6px 0 25px rgba(0,0,0,0.65) !important;
     }
     [data-testid="stSidebarCollapseButton"] {
         display: none !important;
     }
     [data-testid="stSidebarContent"] {
-        padding: 0.5rem 0.25rem !important;
-        overflow-x: hidden !important;
+        padding: 0.8rem 0.4rem !important;
+        overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+    }
+    [data-testid="stSidebar"] .stButton {
+        width: 100% !important;
     }
     [data-testid="stSidebar"] .stButton > button {
-        text-align: left !important;
+        text-align: center !important;
+        justify-content: center !important;
+        display: flex !important;
+        align-items: center !important;
         white-space: nowrap !important;
         overflow: hidden !important;
-        text-overflow: clip !important;
-        padding: 9px 12px !important;
-        font-size: 13.5px !important;
-        border-radius: 8px !important;
-        margin-bottom: 5px !important;
-        transition: all 0.18s ease !important;
+        padding: 10px 0 !important;
+        font-size: 1.15rem !important;
+        border-radius: 10px !important;
+        margin-bottom: 6px !important;
+        transition: all 0.2s ease !important;
+        width: 100% !important;
     }
     [data-testid="stSidebar"] .stButton > button:hover {
-        transform: translateX(3px) !important;
+        transform: scale(1.05) !important;
         border-color: #3b82f6 !important;
     }
 
-    /* Slide Titles */
+    /* Slide Titles - No cut-off text */
     .slide-header {
         text-align: center;
         margin-bottom: 1.4rem;
+        padding-top: 0.4rem;
+        overflow: visible !important;
     }
     .slide-title {
-        font-size: 2.3rem;
+        font-size: clamp(1.6rem, 2.3vw, 2.3rem);
         font-weight: 700;
         color: #f8fafc;
         margin: 0;
-        letter-spacing: -0.02em;
+        line-height: 1.35 !important;
+        letter-spacing: -0.01em;
     }
     .slide-subtitle {
         color: #94a3b8;
-        font-size: 1.1rem;
+        font-size: clamp(0.95rem, 1.1vw, 1.1rem);
         margin: 6px 0 0 0;
+        line-height: 1.4 !important;
     }
 
     /* Symmetrical Deck Cards */
@@ -463,13 +475,12 @@ VARIANT_INFO = {
     },
 }
 
-# ----------------- SLIM POPOUT SIDEBAR -----------------
+# ----------------- SLIM POPOUT SIDEBAR (ICON DOCK) -----------------
 with st.sidebar:
-    st.markdown('<div style="text-align:center; padding:4px 0 8px 0; font-size:22px;">🛡️</div>', unsafe_allow_html=True)
+    st.markdown('<div style="text-align:center; padding:0 0 10px 0; font-size:24px;">🛡️</div>', unsafe_allow_html=True)
     for i, (icon, label) in enumerate(SIDEBAR_STEPS):
         is_active = (i == st.session_state['step_index'])
-        btn_text = f"{icon}  {label}"
-        if st.button(btn_text, key=f"nav_step_{i}", use_container_width=True, type="primary" if is_active else "secondary"):
+        if st.button(icon, key=f"nav_step_{i}", help=f"Step {i}: {label}", use_container_width=True, type="primary" if is_active else "secondary"):
             st.session_state['step_index'] = i
             st.rerun()
 
