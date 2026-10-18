@@ -362,119 +362,301 @@ def render_interactive_full_graph_html(g, height: int = 480) -> str:
     <head>
       <meta charset="utf-8" />
       <script type="text/javascript" src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
       <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{
-          background: #0f131d;
-          color: #e2e8f0;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          background: #0d1117;
+          color: #c9d1d9;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
           overflow: hidden;
+          font-size: 12px;
         }}
-        .browser-container {{
-          border: 1px solid #1e293b;
-          border-radius: 8px;
-          background: #0b0f19;
-          position: relative;
+        .falkor-window {{
           width: 100%;
           height: {height}px;
           display: flex;
           flex-direction: column;
+          border: 1px solid #30363d;
+          border-radius: 8px;
+          background: #0d1117;
+          overflow: hidden;
         }}
-        .falkor-bar {{
-          background: #141a29;
-          border-bottom: 1px solid #1e293b;
-          padding: 8px 12px;
+        /* Top Navigation Header */
+        .falkor-top-nav {{
+          background: #161b22;
+          border-bottom: 1px solid #30363d;
+          padding: 6px 14px;
           display: flex;
           align-items: center;
-          gap: 10px;
-          font-size: 12px;
-        }}
-        .query-box {{
-          background: #090d16;
-          border: 1px solid #334155;
-          border-radius: 4px;
-          color: #38bdf8;
-          font-family: monospace;
-          font-size: 12px;
-          padding: 4px 10px;
-          flex-grow: 1;
-        }}
-        .falkor-badge {{
-          background: #2563eb;
-          color: #ffffff;
-          font-weight: 600;
-          padding: 3px 8px;
-          border-radius: 4px;
+          gap: 16px;
           font-size: 11px;
+          color: #8b949e;
         }}
-        .graph-workspace {{
-          flex-grow: 1;
-          position: relative;
-          width: 100%;
-          height: calc(100% - 75px);
-        }}
-        #mynetwork {{
-          width: 100%;
-          height: 100%;
-        }}
-        .falkor-legend {{
-          position: absolute;
-          top: 10px;
-          left: 12px;
-          background: rgba(15, 23, 42, 0.85);
-          backdrop-filter: blur(4px);
-          border: 1px solid #1e293b;
-          border-radius: 6px;
-          padding: 8px 10px;
+        .top-badge-falkor {{
+          background: linear-gradient(135deg, #7928ca, #ff0080);
+          color: #fff;
+          font-weight: 700;
           font-size: 11px;
-          pointer-events: none;
-          z-index: 10;
+          padding: 2px 7px;
+          border-radius: 4px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
         }}
-        .legend-item {{
+        .top-conn {{
           display: flex;
           align-items: center;
           gap: 6px;
-          margin-bottom: 4px;
         }}
-        .legend-item:last-child {{ margin-bottom: 0; }}
-        .dot {{
-          width: 10px;
-          height: 10px;
+        .top-conn-pill {{
+          background: #238636;
+          color: #fff;
+          padding: 1px 6px;
+          border-radius: 10px;
+          font-size: 10px;
+          font-weight: 600;
+        }}
+        /* Main Workspace Split */
+        .falkor-body {{
+          display: flex;
+          flex: 1;
+          height: calc(100% - 30px);
+          overflow: hidden;
+        }}
+        /* Left Activity Toolbar */
+        .activity-bar {{
+          width: 38px;
+          background: #0d1117;
+          border-right: 1px solid #30363d;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding-top: 10px;
+          gap: 16px;
+          color: #8b949e;
+        }}
+        .activity-icon {{
+          cursor: pointer;
+          font-size: 14px;
+          transition: color 0.15s;
+        }}
+        .activity-icon:hover, .activity-icon.active {{
+          color: #58a6ff;
+        }}
+        /* Left Info / Schema Panel */
+        .info-panel {{
+          width: 195px;
+          background: #161b22;
+          border-right: 1px solid #30363d;
+          padding: 10px 12px;
+          overflow-y: auto;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          font-size: 11px;
+        }}
+        .panel-title {{
+          font-weight: 600;
+          color: #f0f6fc;
+          font-size: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }}
+        .db-select {{
+          background: #0d1117;
+          border: 1px solid #30363d;
+          color: #58a6ff;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 11px;
+          font-weight: 500;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }}
+        .schema-section-title {{
+          font-size: 10px;
+          font-weight: 700;
+          color: #8b949e;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          margin-bottom: 5px;
+        }}
+        .label-chip-group {{
+          display: flex;
+          flex-wrap: wrap;
+          gap: 4px;
+        }}
+        .label-chip {{
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          padding: 2px 7px;
+          border-radius: 12px;
+          font-size: 10px;
+          background: #21262d;
+          color: #c9d1d9;
+          border: 1px solid #30363d;
+        }}
+        .chip-dot {{
+          width: 8px;
+          height: 8px;
           border-radius: 50%;
         }}
+        /* Right Content Area (Query Bar + Graph) */
+        .graph-area {{
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          position: relative;
+          background: #0d1117;
+          overflow: hidden;
+        }}
+        /* Query Input Bar */
+        .query-bar {{
+          background: #161b22;
+          border-bottom: 1px solid #30363d;
+          padding: 8px 12px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }}
+        .query-input-wrapper {{
+          flex: 1;
+          background: #0d1117;
+          border: 1px solid #30363d;
+          border-radius: 4px;
+          display: flex;
+          align-items: center;
+          padding: 4px 10px;
+          color: #79c0ff;
+          font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+          font-size: 12px;
+        }}
+        .query-run-btn {{
+          background: #238636;
+          color: #fff;
+          border: none;
+          border-radius: 4px;
+          padding: 5px 12px;
+          font-weight: 600;
+          font-size: 11px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }}
+        .query-run-btn:hover {{
+          background: #2ea043;
+        }}
+        /* Canvas */
+        #mynetwork {{
+          flex: 1;
+          width: 100%;
+          height: calc(100% - 75px);
+        }}
+        /* Footer Status Bar */
         .falkor-footer {{
-          background: #141a29;
-          border-top: 1px solid #1e293b;
-          padding: 6px 12px;
+          background: #161b22;
+          border-top: 1px solid #30363d;
+          padding: 5px 14px;
           display: flex;
           justify-content: space-between;
           align-items: center;
           font-size: 11px;
-          color: #94a3b8;
+          color: #8b949e;
+        }}
+        .footer-tools {{
+          display: flex;
+          align-items: center;
+          gap: 12px;
         }}
       </style>
     </head>
     <body>
-      <div class="browser-container">
-        <div class="falkor-bar">
-          <span class="falkor-badge">FalkorDB</span>
-          <div class="query-box">MATCH (n) OPTIONAL MATCH (n)-[r]->(m) RETURN * LIMIT 100</div>
+      <div class="falkor-window">
+        <!-- Top FalkorDB Navbar -->
+        <div class="falkor-top-nav">
+          <div class="top-badge-falkor"><i class="fa-solid fa-circle-nodes"></i> FalkorDB Browser</div>
+          <div class="top-conn"><span class="top-conn-pill">CONNECTED</span> localhost:6379</div>
+          <div>Memory: <b>8.87M</b></div>
+          <div>Graph: <b style="color: #58a6ff;">audit_m7</b></div>
         </div>
 
-        <div class="graph-workspace">
-          <div class="falkor-legend">
-            <div class="legend-item"><span class="dot" style="background: #22c55e;"></span> Entry Function</div>
-            <div class="legend-item"><span class="dot" style="background: #c084fc;"></span> Internal Function</div>
-            <div class="legend-item"><span class="dot" style="background: #3b82f6;"></span> Guarded Function</div>
-            <div class="legend-item"><span class="dot" style="background: #f97316;"></span> Privileged StateVar</div>
-            <div class="legend-item"><span class="dot" style="background: #06b6d4;"></span> StateVar</div>
+        <div class="falkor-body">
+          <!-- Activity Icons -->
+          <div class="activity-bar">
+            <i class="fa-solid fa-diagram-project activity-icon active" title="Graph View"></i>
+            <i class="fa-solid fa-terminal activity-icon" title="Cypher Console"></i>
+            <i class="fa-solid fa-database activity-icon" title="Data Browser"></i>
+            <i class="fa-solid fa-gear activity-icon" title="Settings"></i>
           </div>
-          <div id="mynetwork"></div>
-        </div>
 
-        <div class="falkor-footer">
-          <span>Nodes: <b>{node_count}</b> &nbsp;|&nbsp; Edges: <b>{edge_count}</b></span>
-          <span>🖱️ Click & Drag Nodes • Scroll to Zoom • Pan Canvas</span>
+          <!-- Left Info & Schema Panel -->
+          <div class="info-panel">
+            <div class="panel-title">
+              <span>Graph Info</span>
+              <i class="fa-solid fa-arrows-rotate" style="color: #8b949e; cursor: pointer;"></i>
+            </div>
+            
+            <div class="db-select">
+              <span>audit_m7</span>
+              <i class="fa-solid fa-chevron-down" style="font-size: 9px;"></i>
+            </div>
+
+            <div>
+              <div class="schema-section-title">Nodes ({node_count})</div>
+              <div class="label-chip-group">
+                <span class="label-chip"><span class="chip-dot" style="background:#22c55e;"></span> Function [Entry]</span>
+                <span class="label-chip"><span class="chip-dot" style="background:#c084fc;"></span> Function [Internal]</span>
+                <span class="label-chip"><span class="chip-dot" style="background:#3b82f6;"></span> Function [Guarded]</span>
+                <span class="label-chip"><span class="chip-dot" style="background:#f97316;"></span> StateVar [Privileged]</span>
+                <span class="label-chip"><span class="chip-dot" style="background:#06b6d4;"></span> StateVar</span>
+              </div>
+            </div>
+
+            <div>
+              <div class="schema-section-title">Relationships ({edge_count})</div>
+              <div class="label-chip-group">
+                <span class="label-chip"><span class="chip-dot" style="background:#ec4899;"></span> CALLS</span>
+                <span class="label-chip"><span class="chip-dot" style="background:#f97316;"></span> WRITES</span>
+                <span class="label-chip"><span class="chip-dot" style="background:#a855f7;"></span> DECLARES</span>
+              </div>
+            </div>
+
+            <div>
+              <div class="schema-section-title">Properties</div>
+              <div style="font-size: 10px; color: #8b949e; line-height: 1.5;">
+                is_entry, guarded, visibility, mutability, privileged, name
+              </div>
+            </div>
+          </div>
+
+          <!-- Graph Workspace Area -->
+          <div class="graph-area">
+            <div class="query-bar">
+              <i class="fa-solid fa-play" style="color: #238636; font-size: 10px;"></i>
+              <div class="query-input-wrapper">
+                MATCH (n) OPTIONAL MATCH (n)-[r]->(m) RETURN * LIMIT 100
+              </div>
+              <button class="query-run-btn" onclick="network.fit();"><i class="fa-solid fa-play"></i> RUN</button>
+            </div>
+
+            <div id="mynetwork"></div>
+
+            <div class="falkor-footer">
+              <div class="footer-tools">
+                <span><i class="fa-solid fa-circle" style="color: #238636; font-size: 8px;"></i> Ready</span>
+                <span>Nodes: <b>{node_count}</b></span>
+                <span>Edges: <b>{edge_count}</b></span>
+              </div>
+              <div>
+                <span>🖱️ Drag nodes • Scroll zoom • Click RUN to auto-fit</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
