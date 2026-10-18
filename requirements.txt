@@ -1,0 +1,10 @@
+slither-analyzer
+solc-select
+falkordb
+mcp
+anthropic
+pydantic
+streamlit
+networkx
+pytest
+python-dotenv
