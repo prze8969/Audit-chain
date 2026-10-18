@@ -24,7 +24,7 @@ st.set_page_config(
     page_title='Audit-Chain | Verifiable Smart Contract Audits',
     page_icon='🛡️',
     layout='wide',
-    initial_sidebar_state='collapsed',
+    initial_sidebar_state='expanded',
 )
 
 # Custom CSS for polished user experience
@@ -83,87 +83,116 @@ if 'patch_results' not in st.session_state:
 if 'audit_timestamps' not in st.session_state:
     st.session_state['audit_timestamps'] = []
 
-# Sidebar System Health Status
+# Sidebar: Controls & Audit Configuration (FalkorDB / Studio Feel)
 with st.sidebar:
     st.markdown('### 🛡️ **Audit-Chain**')
-    st.caption('Graph-powered smart-contract audits you can trace and prove.')
+    st.caption('Autonomous Graph-Powered Smart Contract Audits')
     st.divider()
-    st.subheader('System Health')
+
+    st.markdown('#### 🎯 **1. Target Contract**')
+    target_mode = st.radio(
+        'Select Input Method',
+        ['Pre-built Mutation Variant', 'Held-out Benchmark', 'Upload Custom .sol'],
+        index=0,
+        label_visibility='collapsed'
+    )
+
+    chosen_code = None
+    chosen_name = None
+    trigger_run = False
+
+    if target_mode == 'Pre-built Mutation Variant':
+        variant_options = {
+            'm7: Privileged Owner Overwrite': 'm7',
+            'm3: Classical Reentrancy Attack': 'm3',
+            'm2: Missing Access Control': 'm2',
+            'm1: Unprotected State Write': 'm1',
+            'm4: Unguarded Selfdestruct': 'm4',
+            'm5: Reentrancy in Token Transfer': 'm5',
+            'm6: Unchecked Low-Level Call': 'm6',
+            'clean: Verified Secure Contract': 'clean',
+        }
+        chosen_label = st.selectbox('Choose Variant', list(variant_options.keys()), index=0)
+        chosen_var = variant_options[chosen_label]
+        fpath = Path(f'samples/variants/{chosen_var}.sol')
+        if fpath.exists():
+            chosen_code = fpath.read_text(encoding='utf-8')
+            chosen_name = chosen_var
+
+    elif target_mode == 'Held-out Benchmark':
+        held_options = {
+            'h1: Multi-Hop Reentrancy': 'h1',
+            'h2: Complex Access Path': 'h2',
+            'h3: Guarded Write Invalidation': 'h3',
+            'h4: Deep Call-Chain Bypass': 'h4',
+        }
+        chosen_label = st.selectbox('Choose Held-out Contract', list(held_options.keys()), index=0)
+        chosen_held = held_options[chosen_label]
+        fpath = Path(f'samples/heldout/{chosen_held}.sol')
+        if fpath.exists():
+            chosen_code = fpath.read_text(encoding='utf-8')
+            chosen_name = chosen_held
+
+    else:
+        uploaded_file = st.file_uploader('Upload Solidity File (.sol)', type=['sol'], help='Solidity 0.8.19 single-file contract, max 20 KB')
+        if uploaded_file is not None:
+            try:
+                chosen_code = uploaded_file.getvalue().decode('utf-8')
+                chosen_name = Path(uploaded_file.name).stem
+            except Exception as e:
+                st.error(f'Could not read file: {e}')
+
+    st.markdown('#### ⚙️ **2. Agent & Audit Mode**')
+    mode_choice = st.selectbox(
+        'Execution Mode',
+        ['guided', 'agent', 'offline'],
+        index=0,
+        help='guided: MCP summary with directed reachability probes; agent: autonomous open-ended tool discovery; offline: deterministic Cypher AST graph engine.'
+    )
+
+    run_audit_clicked = st.button('🚀 Run Audit Pipeline', type='primary', use_container_width=True)
+    if run_audit_clicked and chosen_code:
+        trigger_run = True
+
+    st.divider()
+    st.markdown('#### 🖥️ **System Health**')
     h = check_health()
     db_icon = '🟢' if h['database'] else '🔴'
     solc_icon = '🟢' if h['compiler'] else '🔴'
-    st.write(f"{db_icon} **Database**: {'Online (FalkorDB)' if h['database'] else 'Unreachable'}")
+    st.write(f"{db_icon} **FalkorDB**: {'Online (6379)' if h['database'] else 'Unreachable'}")
     st.write(f"{solc_icon} **Compiler**: {'solc 0.8.19 ready' if h['compiler'] else 'solc missing'}")
     st.write(f"🤖 **Model Engine**: {h['model_status']}")
-    
-    st.divider()
-    st.caption('Public Demo Limits: Max 5 audits / hour per visitor session. Max file size: 20 KB.')
+    st.caption('Public Demo Limits: Max 5 audits / hr per session • Max 20 KB')
 
-# ----------------- 1. LANDING SECTION -----------------
-st.markdown('<div class="main-title">🛡️ Audit-Chain</div>', unsafe_allow_html=True)
+# ----------------- 1. MAIN AREA HEADER & QUICK ACTIONS -----------------
+st.markdown('<div class="main-title">🛡️ Audit-Chain Studio</div>', unsafe_allow_html=True)
 st.markdown('<div style="font-size: 1.15rem; font-weight: 600; color: #38bdf8; margin-bottom: 0.3rem;">Graph-powered smart-contract audits you can trace and prove.</div>', unsafe_allow_html=True)
-st.markdown('<div class="main-sub">Upload a Solidity contract; an AI agent explores a code graph, finds attacker-reachable bugs, proves each with a path, and proves its patch works.</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-sub">Explore the code graph, prove attacker reachability across multi-hop calls, and verify automated security patches in FalkorDB.</div>', unsafe_allow_html=True)
 
-# Three small step cards
-c1, c2, c3 = st.columns(3)
-with c1:
-    st.markdown('<div class="step-card"><b>1. Pick a contract</b><br><span style="font-size:0.85rem; color:#94a3b8;">Choose a pre-built variant or upload .sol</span></div>', unsafe_allow_html=True)
-with c2:
-    st.markdown('<div class="step-card"><b>2. Watch the agent</b><br><span style="font-size:0.85rem; color:#94a3b8;">Autonomous graph traversal & proof generation</span></div>', unsafe_allow_html=True)
-with c3:
-    st.markdown('<div class="step-card"><b>3. Read and fix findings</b><br><span style="font-size:0.85rem; color:#94a3b8;">Verified multi-hop paths & 1-click patch proof</span></div>', unsafe_allow_html=True)
-
-st.markdown('<div style="height: 12px;"></div>', unsafe_allow_html=True)
-
-# Action Buttons: 3 Big Example buttons + 1 Upload Option
-btn_col1, btn_col2, btn_col3, btn_col4 = st.columns([1.2, 1.2, 1.2, 1.4])
-
-chosen_code = None
-chosen_name = None
-trigger_run = False
-
+# Quick Launch Bar (3 One-click quick presets)
+st.caption('⚡ Quick presets (or configure details on the left sidebar):')
+btn_col1, btn_col2, btn_col3 = st.columns(3)
 with btn_col1:
-    if st.button('⚡ Try reentrancy (m3)', use_container_width=True, type='secondary'):
+    if st.button('⚡ Preset: Privileged Takeover (m7)', use_container_width=True):
+        fpath = Path('samples/variants/m7.sol')
+        if fpath.exists():
+            chosen_code = fpath.read_text(encoding='utf-8')
+            chosen_name = 'm7'
+            trigger_run = True
+with btn_col2:
+    if st.button('⚡ Preset: Reentrancy Bug (m3)', use_container_width=True):
         fpath = Path('samples/variants/m3.sol')
         if fpath.exists():
             chosen_code = fpath.read_text(encoding='utf-8')
             chosen_name = 'm3'
             trigger_run = True
-
-with btn_col2:
-    if st.button('⚡ Try access-control (m2)', use_container_width=True, type='secondary'):
-        fpath = Path('samples/variants/m2.sol')
-        if fpath.exists():
-            chosen_code = fpath.read_text(encoding='utf-8')
-            chosen_name = 'm2'
-            trigger_run = True
-
 with btn_col3:
-    if st.button('🛡️ Try safe contract (clean)', use_container_width=True, type='secondary'):
+    if st.button('🛡️ Preset: Clean Secure Contract', use_container_width=True):
         fpath = Path('samples/variants/clean.sol')
         if fpath.exists():
             chosen_code = fpath.read_text(encoding='utf-8')
             chosen_name = 'clean'
             trigger_run = True
-
-with btn_col4:
-    uploaded_file = st.file_uploader('Or upload your own (.sol)', type=['sol'], label_visibility='collapsed', help='Solidity 0.8.19 single-file contract, max 20 KB')
-    if uploaded_file is not None:
-        try:
-            chosen_code = uploaded_file.getvalue().decode('utf-8')
-            chosen_name = Path(uploaded_file.name).stem
-            trigger_run = True
-        except Exception as e:
-            st.error(f'Could not read file: {e}')
-
-# Advanced Expander (Collapsed by default)
-with st.expander('⚙️ Advanced Settings', expanded=False):
-    adv_col1, adv_col2 = st.columns(2)
-    with adv_col1:
-        mode_choice = st.selectbox('Agent Mode', ['guided', 'agent', 'offline'], index=0, help='guided: MCP summary with directed reachability probes; agent: open-ended tool discovery; offline: pure deterministic graph queries.')
-    with adv_col2:
-        model_name = os.getenv('AGENT_MODEL', 'qwen/qwen3.8-27b')
-        st.text_input('Configured LLM Model', value=model_name, disabled=True, help='Configure AGENT_MODEL in .env')
 
 # ----------------- 2. PROGRESS & AUDIT EXECUTION -----------------
 if trigger_run and chosen_code:
