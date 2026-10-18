@@ -60,6 +60,353 @@ def path_to_dot(path: list[str], sink: str = '') -> str:
     return '\n'.join(lines)
 
 
+def render_interactive_path_html(path: list[str], sink: str = '', height: int = 280) -> str:
+    """Generate self-contained interactive vis-network graph for an attacker call path."""
+    nodes = []
+    edges = []
+
+    if not path:
+        nodes.append({
+            'id': 'empty',
+            'label': 'No Attacker Call Path',
+            'color': {'background': '#1e293b', 'border': '#475569'},
+            'font': {'color': '#94a3b8', 'face': 'Inter, system-ui, sans-serif'}
+        })
+    else:
+        for i, node_name in enumerate(path):
+            if i == 0:
+                nodes.append({
+                    'id': node_name,
+                    'label': f"▶ {node_name}\n(Attacker Entry)",
+                    'color': {'background': '#15803d', 'border': '#22c55e', 'highlight': {'background': '#16a34a', 'border': '#4ade80'}},
+                    'font': {'color': '#ffffff', 'face': 'Inter, system-ui, sans-serif', 'bold': True},
+                    'shape': 'box',
+                    'margin': 10
+                })
+            else:
+                nodes.append({
+                    'id': node_name,
+                    'label': f"{node_name}\n(Internal Hop)",
+                    'color': {'background': '#1e293b', 'border': '#ef4444', 'highlight': {'background': '#334155', 'border': '#f87171'}},
+                    'font': {'color': '#f87171', 'face': 'Inter, system-ui, sans-serif'},
+                    'shape': 'box',
+                    'margin': 10
+                })
+
+        for i in range(len(path) - 1):
+            edges.append({
+                'from': path[i],
+                'to': path[i+1],
+                'label': 'CALLS',
+                'arrows': 'to',
+                'color': {'color': '#ef4444', 'highlight': '#f87171'},
+                'font': {'color': '#cbd5e1', 'size': 11, 'align': 'middle'},
+                'width': 2.5
+            })
+
+        if sink:
+            nodes.append({
+                'id': sink,
+                'label': f"⚠️ {sink}\n(Privileged Var)",
+                'color': {'background': '#c2410c', 'border': '#ea580c', 'highlight': {'background': '#ea580c', 'border': '#fb923c'}},
+                'font': {'color': '#ffffff', 'face': 'Inter, system-ui, sans-serif', 'bold': True},
+                'shape': 'box',
+                'margin': 10
+            })
+            edges.append({
+                'from': path[-1],
+                'to': sink,
+                'label': 'WRITES',
+                'arrows': 'to',
+                'dashes': True,
+                'color': {'color': '#f97316', 'highlight': '#fb923c'},
+                'font': {'color': '#fb923c', 'size': 11, 'align': 'middle'},
+                'width': 2.5
+            })
+
+    nodes_json = json.dumps(nodes)
+    edges_json = json.dumps(edges)
+
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8" />
+      <script type="text/javascript" src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+      <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{
+          background: #0b0f19;
+          color: #e2e8f0;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          overflow: hidden;
+        }}
+        #mynetwork {{
+          width: 100%;
+          height: {height}px;
+          border: 1px solid #1e293b;
+          border-radius: 8px;
+          background: #080c14;
+        }}
+        .controls-hint {{
+          position: absolute;
+          bottom: 8px;
+          right: 12px;
+          font-size: 11px;
+          color: #64748b;
+          background: rgba(15, 23, 42, 0.7);
+          padding: 2px 6px;
+          border-radius: 4px;
+          pointer-events: none;
+        }}
+      </style>
+    </head>
+    <body>
+      <div id="mynetwork"></div>
+      <div class="controls-hint">🖱️ Drag to pan • Scroll to zoom • Drag nodes</div>
+      <script type="text/javascript">
+        var container = document.getElementById('mynetwork');
+        var data = {{
+          nodes: new vis.DataSet({nodes_json}),
+          edges: new vis.DataSet({edges_json})
+        }};
+        var options = {{
+          layout: {{
+            hierarchical: {{
+              enabled: true,
+              direction: 'LR',
+              sortMethod: 'directed',
+              levelSeparation: 160,
+              nodeSpacing: 100
+            }}
+          }},
+          physics: {{
+            enabled: false
+          }},
+          interaction: {{
+            hover: true,
+            dragNodes: true,
+            dragView: true,
+            zoomView: true
+          }},
+          nodes: {{
+            borderWidth: 2,
+            shadow: {{
+              enabled: true,
+              color: 'rgba(0,0,0,0.5)',
+              size: 8,
+              x: 2,
+              y: 2
+            }}
+          }},
+          edges: {{
+            smooth: {{
+              type: 'cubicBezier',
+              forceDirection: 'horizontal',
+              roundness: 0.3
+            }}
+          }}
+        }};
+        var network = new vis.Network(container, data, options);
+        network.fit();
+      </script>
+    </body>
+    </html>
+    """
+
+
+def render_interactive_full_graph_html(g, height: int = 480) -> str:
+    """Generate self-contained interactive vis-network graph for the entire FalkorDB code graph."""
+    nodes = []
+    edges = []
+
+    try:
+        # Functions
+        fn_rows = g.query("MATCH (f:Function) RETURN f.id, f.is_entry, f.guarded, f.visibility").result_set
+        for row in fn_rows:
+            f_id, is_entry, guarded, vis = row[0], row[1], row[2], row[3]
+            if is_entry and not guarded:
+                nodes.append({
+                    'id': f_id,
+                    'label': f"▶ {f_id}\n[Entry]",
+                    'title': f"Public Entry Point: {f_id} (Unauthenticated/Unguarded)",
+                    'color': {'background': '#15803d', 'border': '#22c55e', 'highlight': {'background': '#16a34a', 'border': '#4ade80'}},
+                    'font': {'color': '#ffffff', 'face': 'Inter, system-ui, sans-serif'},
+                    'shape': 'box',
+                    'margin': 8
+                })
+            elif guarded:
+                nodes.append({
+                    'id': f_id,
+                    'label': f"🛡️ {f_id}\n[Guarded]",
+                    'title': f"Protected Function: {f_id} (Access controlled)",
+                    'color': {'background': '#1e3a8a', 'border': '#3b82f6', 'highlight': {'background': '#2563eb', 'border': '#60a5fa'}},
+                    'font': {'color': '#ffffff', 'face': 'Inter, system-ui, sans-serif'},
+                    'shape': 'box',
+                    'margin': 8
+                })
+            else:
+                nodes.append({
+                    'id': f_id,
+                    'label': f"{f_id}\n[Internal]",
+                    'title': f"Internal Function: {f_id}",
+                    'color': {'background': '#1e293b', 'border': '#475569', 'highlight': {'background': '#334155', 'border': '#94a3b8'}},
+                    'font': {'color': '#cbd5e1', 'face': 'Inter, system-ui, sans-serif'},
+                    'shape': 'box',
+                    'margin': 8
+                })
+
+        # State Variables
+        var_rows = g.query("MATCH (v:StateVar) RETURN v.id, v.privileged").result_set
+        for row in var_rows:
+            v_id, priv = row[0], row[1]
+            if priv:
+                nodes.append({
+                    'id': v_id,
+                    'label': f"⚠️ {v_id}\n[Privileged Var]",
+                    'title': f"Privileged State Variable: {v_id}",
+                    'color': {'background': '#c2410c', 'border': '#ea580c', 'highlight': {'background': '#ea580c', 'border': '#fb923c'}},
+                    'font': {'color': '#ffffff', 'face': 'Inter, system-ui, sans-serif'},
+                    'shape': 'box',
+                    'margin': 8
+                })
+            else:
+                nodes.append({
+                    'id': v_id,
+                    'label': f"{v_id}\n[StateVar]",
+                    'title': f"State Variable: {v_id}",
+                    'color': {'background': '#0f172a', 'border': '#334155', 'highlight': {'background': '#1e293b', 'border': '#64748b'}},
+                    'font': {'color': '#94a3b8', 'face': 'Inter, system-ui, sans-serif'},
+                    'shape': 'box',
+                    'margin': 8
+                })
+
+        # CALLS Edges
+        call_rows = g.query("MATCH (a:Function)-[r:CALLS]->(b:Function) RETURN a.id, b.id").result_set
+        for row in call_rows:
+            edges.append({
+                'from': row[0],
+                'to': row[1],
+                'label': 'CALLS',
+                'arrows': 'to',
+                'color': {'color': '#ef4444', 'highlight': '#f87171'},
+                'font': {'color': '#94a3b8', 'size': 10, 'align': 'middle'},
+                'width': 2
+            })
+
+        # WRITES Edges
+        write_rows = g.query("MATCH (a:Function)-[r:WRITES]->(b:StateVar) RETURN a.id, b.id").result_set
+        for row in write_rows:
+            edges.append({
+                'from': row[0],
+                'to': row[1],
+                'label': 'WRITES',
+                'arrows': 'to',
+                'dashes': True,
+                'color': {'color': '#f97316', 'highlight': '#fb923c'},
+                'font': {'color': '#fb923c', 'size': 10, 'align': 'middle'},
+                'width': 2
+            })
+
+    except Exception as err:
+        nodes.append({
+            'id': 'error',
+            'label': f"Error reading graph: {err}",
+            'color': {'background': '#7f1d1d', 'border': '#ef4444'},
+            'font': {'color': '#fca5a5'}
+        })
+
+    nodes_json = json.dumps(nodes)
+    edges_json = json.dumps(edges)
+
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8" />
+      <script type="text/javascript" src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+      <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{
+          background: #0b0f19;
+          color: #e2e8f0;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          overflow: hidden;
+        }}
+        #mynetwork {{
+          width: 100%;
+          height: {height}px;
+          border: 1px solid #1e293b;
+          border-radius: 8px;
+          background: #080c14;
+        }}
+        .controls-hint {{
+          position: absolute;
+          bottom: 10px;
+          right: 14px;
+          font-size: 11px;
+          color: #64748b;
+          background: rgba(15, 23, 42, 0.75);
+          padding: 3px 8px;
+          border-radius: 4px;
+          pointer-events: none;
+        }}
+      </style>
+    </head>
+    <body>
+      <div id="mynetwork"></div>
+      <div class="controls-hint">🖱️ Drag to pan • Scroll to zoom • Drag nodes freely</div>
+      <script type="text/javascript">
+        var container = document.getElementById('mynetwork');
+        var data = {{
+          nodes: new vis.DataSet({nodes_json}),
+          edges: new vis.DataSet({edges_json})
+        }};
+        var options = {{
+          physics: {{
+            enabled: true,
+            solver: 'forceAtlas2Based',
+            forceAtlas2Based: {{
+              gravitationalConstant: -40,
+              centralGravity: 0.01,
+              springLength: 120,
+              springConstant: 0.08,
+              damping: 0.4
+            }},
+            stabilization: {{
+              iterations: 150
+            }}
+          }},
+          interaction: {{
+            hover: true,
+            tooltipDelay: 100,
+            dragNodes: true,
+            dragView: true,
+            zoomView: true
+          }},
+          nodes: {{
+            borderWidth: 2,
+            shadow: {{
+              enabled: true,
+              color: 'rgba(0,0,0,0.4)',
+              size: 6,
+              x: 2,
+              y: 2
+            }}
+          }},
+          edges: {{
+            smooth: {{
+              type: 'continuous'
+            }}
+          }}
+        }};
+        var network = new vis.Network(container, data, options);
+      </script>
+    </body>
+    </html>
+    """
+
+
 def full_graph_to_dot(g) -> str:
     """Generate Graphviz DOT representation of the entire contract call and state graph."""
     Q = chr(34)

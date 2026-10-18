@@ -15,6 +15,8 @@ from src.ui_helpers import (
     full_graph_to_dot,
     generate_markdown_report,
     path_to_dot,
+    render_interactive_full_graph_html,
+    render_interactive_path_html,
     run_audit_pipeline,
 )
 
@@ -307,8 +309,8 @@ if audit_data:
             with right_col:
                 st.subheader('Attacker Call Path')
                 first_finding = rep.findings[0]
-                dot_content = path_to_dot(first_finding.path, first_finding.sink)
-                st.graphviz_chart(dot_content, use_container_width=True)
+                interactive_html = render_interactive_path_html(first_finding.path, first_finding.sink, height=280)
+                st.components.v1.html(interactive_html, height=300)
 
                 st.markdown('---')
                 st.subheader('⏱️ What the agent did')
@@ -346,11 +348,11 @@ Every finding in this report has undergone rigorous mathematical verification ag
 
     with tab_graph:
         st.subheader(f'🕸️ FalkorDB Code Knowledge Graph: `{rep.project}`')
-        st.caption('Complete directed multi-hop graph of public entries, internal functions, modifier guards, and state-variable writes.')
+        st.caption('Complete directed multi-hop graph of public entries, internal functions, modifier guards, and state-variable writes. (Interactive: drag nodes, zoom, and pan).')
         
         g = get_graph(f'audit_{rep.project}')
-        full_dot = full_graph_to_dot(g)
-        st.graphviz_chart(full_dot, use_container_width=True)
+        full_interactive_html = render_interactive_full_graph_html(g, height=480)
+        st.components.v1.html(full_interactive_html, height=510)
 
         g_col1, g_col2 = st.columns(2)
         with g_col1:
