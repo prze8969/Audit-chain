@@ -21,64 +21,162 @@ from src.ui_helpers import (
 )
 
 st.set_page_config(
-    page_title='Audit-Chain | Verifiable Smart Contract Audits',
+    page_title='Audit-Chain | FalkorDB Smart Contract Studio',
     page_icon='🛡️',
     layout='wide',
     initial_sidebar_state='expanded',
 )
 
-# Custom CSS for polished user experience
+# Custom CSS for Full FalkorDB Browser / Web3 Studio Look & Feel
 st.markdown('''
 <style>
-    .main-title {
-        font-size: 2.2rem;
-        font-weight: 700;
-        margin-bottom: 0.2rem;
-        color: #f8fafc;
+    /* Google Fonts import */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    html, body, [class*="css"] {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
-    .main-sub {
-        font-size: 1.1rem;
-        color: #94a3b8;
-        margin-bottom: 1.5rem;
+
+    /* Overall Dark Slate FalkorDB Theme */
+    .stApp {
+        background-color: #0d1117;
+        color: #c9d1d9;
     }
-    .step-card {
-        background-color: #1e293b;
-        border: 1px solid #334155;
+
+    /* Top FalkorDB Global Banner */
+    .falkor-global-header {
+        background: #161b22;
+        border: 1px solid #30363d;
         border-radius: 8px;
-        padding: 12px 16px;
-        text-align: center;
-        font-weight: 500;
-        color: #e2e8f0;
+        padding: 8px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.2rem;
+        font-size: 12px;
+        color: #8b949e;
     }
-    .metric-card {
-        background-color: #0f172a;
-        border: 1px solid #1e293b;
-        border-radius: 8px;
-        padding: 14px 18px;
-        text-align: center;
-    }
-    .metric-value {
-        font-size: 1.8rem;
+    .falkor-logo-badge {
+        background: linear-gradient(135deg, #7928ca 0%, #ff0080 100%);
+        color: #ffffff;
         font-weight: 700;
-        color: #38bdf8;
+        font-size: 13px;
+        padding: 4px 10px;
+        border-radius: 6px;
+        letter-spacing: 0.03em;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
     }
-    .metric-label {
-        font-size: 0.85rem;
-        color: #94a3b8;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+    .conn-status-badge {
+        background: #238636;
+        color: #ffffff;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
     }
-    /* Ensure sidebar remains visibly anchored and judges can see the controls */
+
+    /* Sidebar Styling (FalkorDB Browser Schema Explorer) */
     [data-testid="stSidebar"] {
+        background-color: #161b22 !important;
+        border-right: 1px solid #30363d !important;
         min-width: 320px !important;
         max-width: 360px !important;
     }
-    /* Code and graph side-by-side container */
-    .editor-container {
-        border: 1px solid #1e293b;
+    [data-testid="stSidebar"] * {
+        color: #c9d1d9 !important;
+    }
+    [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3, [data-testid="stSidebar"] h4 {
+        color: #f0f6fc !important;
+    }
+
+    /* Studio Step & Metric Cards */
+    .step-card {
+        background-color: #161b22;
+        border: 1px solid #30363d;
         border-radius: 8px;
-        background-color: #0b0f19;
-        overflow: hidden;
+        padding: 14px 18px;
+        text-align: left;
+        font-weight: 500;
+        color: #c9d1d9;
+        transition: border-color 0.2s;
+    }
+    .step-card:hover {
+        border-color: #58a6ff;
+    }
+    .metric-card {
+        background-color: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 8px;
+        padding: 12px 16px;
+        text-align: center;
+    }
+    .metric-value {
+        font-size: 1.9rem;
+        font-weight: 700;
+        color: #58a6ff;
+        font-family: 'JetBrains Mono', monospace;
+    }
+    .metric-label {
+        font-size: 0.8rem;
+        color: #8b949e;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-top: 4px;
+    }
+
+    /* Styled Buttons */
+    .stButton>button {
+        background-color: #21262d;
+        color: #c9d1d9;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        font-weight: 500;
+        transition: all 0.15s ease-in-out;
+    }
+    .stButton>button:hover {
+        background-color: #30363d;
+        color: #f0f6fc;
+        border-color: #8b949e;
+    }
+    .stButton>button[kind="primary"] {
+        background-color: #238636;
+        color: #ffffff;
+        border: 1px solid rgba(240, 246, 252, 0.1);
+        font-weight: 600;
+    }
+    .stButton>button[kind="primary"]:hover {
+        background-color: #2ea043;
+    }
+
+    /* Code Block & Terminal Styling */
+    pre, code {
+        font-family: 'JetBrains Mono', monospace !important;
+        background-color: #0d1117 !important;
+        border-color: #30363d !important;
+    }
+
+    /* Tabs Styling */
+    .stTabs [data-baseweb="tab-list"] {
+        background-color: #161b22;
+        border-bottom: 1px solid #30363d;
+        padding: 4px 8px;
+        border-radius: 8px 8px 0 0;
+        gap: 8px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        color: #8b949e;
+        font-weight: 500;
+        border-radius: 6px;
+        padding: 6px 14px;
+    }
+    .stTabs [aria-selected="true"] {
+        color: #58a6ff !important;
+        background-color: #21262d !important;
     }
 </style>
 ''', unsafe_allow_html=True)
@@ -177,9 +275,26 @@ with st.sidebar:
     st.caption('Public Demo Limits: Max 5 audits / hr per session • Max 20 KB')
 
 # ----------------- 1. LANDING & PRESET SELECTION -----------------
+# FalkorDB Browser Global Top Navbar (Matching the image)
+st.markdown('''
+<div class="falkor-global-header">
+    <div style="display: flex; align-items: center; gap: 14px;">
+        <span class="falkor-logo-badge">⚡ FalkorDB Browser v4.22.01</span>
+        <span>Connections: <b>audit_m7</b></span>
+        <span class="conn-status-badge">🟢 Connected</span>
+        <span>User: <b>default</b></span>
+        <span>Host: <code>localhost:6379</code></span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 14px;">
+        <span>Memory: <b>8.87M</b></span>
+        <span>Graphs: <b>5</b></span>
+    </div>
+</div>
+''', unsafe_allow_html=True)
+
 st.markdown('<div class="main-title">🛡️ Audit-Chain Studio</div>', unsafe_allow_html=True)
-st.markdown('<div style="font-size: 1.15rem; font-weight: 600; color: #38bdf8; margin-bottom: 0.3rem;">Graph-powered smart-contract audits you can trace and prove.</div>', unsafe_allow_html=True)
-st.markdown('<div class="main-sub">Select a smart contract below or configure it on the left panel. The agent analyzes the AST code graph, proves attacker reachability, and verifies automated patches in FalkorDB.</div>', unsafe_allow_html=True)
+st.markdown('<div style="font-size: 1.15rem; font-weight: 600; color: #58a6ff; margin-bottom: 0.3rem;">Autonomous Graph-Powered Smart Contract Audits & Proofs</div>', unsafe_allow_html=True)
+st.markdown('<div style="color: #8b949e; margin-bottom: 1.2rem;">Select a smart contract below or configure it on the left panel. The agent analyzes the AST code graph, proves attacker reachability, and verifies automated patches in FalkorDB.</div>', unsafe_allow_html=True)
 
 # 3 Step Explainer Cards
 c1, c2, c3 = st.columns(3)
