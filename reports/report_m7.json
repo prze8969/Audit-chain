@@ -1,0 +1,69 @@
+{
+  "project": "m7",
+  "attack_surface": 18,
+  "findings": [
+    {
+      "finding_id": "P0:Treasury._grant(address):Treasury.owner",
+      "klass": "P",
+      "title": "Unguarded Privileged State Write",
+      "severity": "High",
+      "function_id": "Treasury._grant(address)",
+      "reachable": true,
+      "path": [
+        "Treasury.handOver(address)",
+        "Treasury._grant(address)"
+      ],
+      "sink": "Treasury.owner",
+      "evidence_cypher": "MATCH p = (e:Function {is_entry: true, guarded: false})-[:CALLS*1..6]->(t:Function {id: $id}) WITH p, length(p) AS len RETURN [n IN nodes(p) | n.id] AS path ORDER BY len LIMIT 3",
+      "explanation": "Unguarded Privileged State Write found affecting Treasury._grant(address). Attacker reachable call path: Treasury.handOver(address) -> Treasury._grant(address). Severity is High.",
+      "recommended_fix": "Add an access-control modifier such as onlyOwner to the entry function of the path."
+    },
+    {
+      "finding_id": "P1:Treasury.setOwner(address):Treasury.owner",
+      "klass": "P",
+      "title": "Unguarded Privileged State Write",
+      "severity": "High",
+      "function_id": "Treasury.setOwner(address)",
+      "reachable": true,
+      "path": [
+        "Treasury.setOwner(address)"
+      ],
+      "sink": "Treasury.owner",
+      "evidence_cypher": "MATCH p = (e:Function {is_entry: true, guarded: false})-[:CALLS*1..6]->(t:Function {id: $id}) WITH p, length(p) AS len RETURN [n IN nodes(p) | n.id] AS path ORDER BY len LIMIT 3",
+      "explanation": "Unguarded Privileged State Write found affecting Treasury.setOwner(address). Attacker reachable call path: Treasury.setOwner(address). Severity is High.",
+      "recommended_fix": "Add an access-control modifier such as onlyOwner to the entry function of the path."
+    },
+    {
+      "finding_id": "S0:reentrancy-eth",
+      "klass": "R",
+      "title": "Reentrancy Vulnerability",
+      "severity": "High",
+      "function_id": "Treasury.withdraw(uint256)",
+      "reachable": true,
+      "path": [
+        "Treasury.withdraw(uint256)"
+      ],
+      "sink": "",
+      "evidence_cypher": "MATCH p = (e:Function {is_entry: true, guarded: false})-[:CALLS*1..6]->(t:Function {id: $id}) WITH p, length(p) AS len RETURN [n IN nodes(p) | n.id] AS path ORDER BY len LIMIT 3",
+      "explanation": "Reentrancy Vulnerability found affecting Treasury.withdraw(uint256). Attacker reachable call path: Treasury.withdraw(uint256). Severity is High.",
+      "recommended_fix": "Move the state update before the external call (checks-effects-interactions) or add a reentrancy guard."
+    },
+    {
+      "finding_id": "S1:unchecked-lowlevel",
+      "klass": "U",
+      "title": "Unchecked Low-Level Call",
+      "severity": "Medium",
+      "function_id": "Treasury.refund(uint256)",
+      "reachable": true,
+      "path": [
+        "Treasury.refund(uint256)"
+      ],
+      "sink": "",
+      "evidence_cypher": "MATCH p = (e:Function {is_entry: true, guarded: false})-[:CALLS*1..6]->(t:Function {id: $id}) WITH p, length(p) AS len RETURN [n IN nodes(p) | n.id] AS path ORDER BY len LIMIT 3",
+      "explanation": "Unchecked Low-Level Call found affecting Treasury.refund(uint256). Attacker reachable call path: Treasury.refund(uint256). Severity is Medium.",
+      "recommended_fix": "Capture the success flag of the low-level call and require that it is true."
+    }
+  ],
+  "rejected": [],
+  "mode": "fallback"
+}
