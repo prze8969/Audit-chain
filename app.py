@@ -1,197 +1,367 @@
 import difflib
 import json
+import os
 from pathlib import Path
+import time
 import streamlit as st
 
-from src.agent import run_agent, run_offline
-from src.graph import get_graph
-from src.ingest import ingest
 from src.patch import patch_with_retries
+from src.ui_helpers import (
+    CLASS_LABELS,
+    SEVERITY_COLORS,
+    check_health,
+    compute_file_hash,
+    generate_markdown_report,
+    path_to_dot,
+    run_audit_pipeline,
+)
 
+st.set_page_config(
+    page_title='Audit-Chain | Verifiable Smart Contract Audits',
+    page_icon='🛡️',
+    layout='wide',
+    initial_sidebar_state='collapsed',
+)
 
-def path_to_dot(path: list[str], sink: str = '') -> str:
-    Q = chr(34)
-    lines = [
-        'digraph G {',
-        '  rankdir=LR;',
-        '  node [shape=box, style="rounded,filled", fontname="Courier", fontsize=11, fillcolor="#1e1e2e", fontcolor="#cdd6f4", color="#313244"];',
-        '  edge [color="#89b4fa", fontname="Courier", fontsize=9, fontcolor="#a6adc8"];',
-    ]
-    if not path:
-        lines.append('  empty [label="No Attacker Call Path", fillcolor="#313244", fontcolor="#a6adc8"];')
-        lines.append('}')
-        return '\n'.join(lines)
+# Custom CSS for polished user experience
+st.markdown('''
+<style>
+    .main-title {
+        font-size: 2.2rem;
+        font-weight: 700;
+        margin-bottom: 0.2rem;
+        color: #f8fafc;
+    }
+    .main-sub {
+        font-size: 1.1rem;
+        color: #94a3b8;
+        margin-bottom: 1.5rem;
+    }
+    .step-card {
+        background-color: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 12px 16px;
+        text-align: center;
+        font-weight: 500;
+        color: #e2e8f0;
+    }
+    .metric-card {
+        background-color: #0f172a;
+        border: 1px solid #1e293b;
+        border-radius: 8px;
+        padding: 14px 18px;
+        text-align: center;
+    }
+    .metric-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #38bdf8;
+    }
+    .metric-label {
+        font-size: 0.85rem;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+</style>
+''', unsafe_allow_html=True)
 
-    for i, node in enumerate(path):
-        if i == 0:
-            lines.append(f'  {Q}{node}{Q} [label={Q}{node}\\n(Attacker Entry){Q}, fillcolor="#a6e3a1", fontcolor="#11111b", style="rounded,filled", color="#94e2d5", penwidth=2];')
-        else:
-            lines.append(f'  {Q}{node}{Q} [label={Q}{node}{Q}, fillcolor="#313244", fontcolor="#f38ba8", style="rounded,filled", color="#f38ba8", penwidth=2];')
+# ----------------- SESSION STATE SETUP -----------------
+if 'audit_data' not in st.session_state:
+    st.session_state['audit_data'] = None
+if 'active_target' not in st.session_state:
+    st.session_state['active_target'] = None
+if 'cached_audits' not in st.session_state:
+    st.session_state['cached_audits'] = {}
+if 'patch_results' not in st.session_state:
+    st.session_state['patch_results'] = {}
+if 'audit_timestamps' not in st.session_state:
+    st.session_state['audit_timestamps'] = []
 
-    for i in range(len(path) - 1):
-        lines.append(f'  {Q}{path[i]}{Q} -> {Q}{path[i+1]}{Q} [label="CALLS", color="#f38ba8", penwidth=2];')
+# Sidebar System Health Status
+with st.sidebar:
+    st.markdown('### 🛡️ **Audit-Chain**')
+    st.caption('Graph-powered smart-contract audits you can trace and prove.')
+    st.divider()
+    st.subheader('System Health')
+    h = check_health()
+    db_icon = '🟢' if h['database'] else '🔴'
+    solc_icon = '🟢' if h['compiler'] else '🔴'
+    st.write(f"{db_icon} **Database**: {'Online (FalkorDB)' if h['database'] else 'Unreachable'}")
+    st.write(f"{solc_icon} **Compiler**: {'solc 0.8.19 ready' if h['compiler'] else 'solc missing'}")
+    st.write(f"🤖 **Model Engine**: {h['model_status']}")
+    
+    st.divider()
+    st.caption('Public Demo Limits: Max 5 audits / hour per visitor session. Max file size: 20 KB.')
 
-    if sink:
-        lines.append(f'  {Q}{sink}{Q} [label={Q}{sink}\\n(Privileged Var){Q}, shape=box, fillcolor="#fab387", fontcolor="#11111b", style="filled", color="#f9e2af", penwidth=2];')
-        last_fn = path[-1]
-        lines.append(f'  {Q}{last_fn}{Q} -> {Q}{sink}{Q} [label="WRITES", color="#fab387", style="dashed", penwidth=2];')
+# ----------------- 1. LANDING SECTION -----------------
+st.markdown('<div class="main-title">🛡️ Audit-Chain</div>', unsafe_allow_html=True)
+st.markdown('<div style="font-size: 1.15rem; font-weight: 600; color: #38bdf8; margin-bottom: 0.3rem;">Graph-powered smart-contract audits you can trace and prove.</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-sub">Upload a Solidity contract; an AI agent explores a code graph, finds attacker-reachable bugs, proves each with a path, and proves its patch works.</div>', unsafe_allow_html=True)
 
-    lines.append('}')
-    return '\n'.join(lines)
+# Three small step cards
+c1, c2, c3 = st.columns(3)
+with c1:
+    st.markdown('<div class="step-card"><b>1. Pick a contract</b><br><span style="font-size:0.85rem; color:#94a3b8;">Choose a pre-built variant or upload .sol</span></div>', unsafe_allow_html=True)
+with c2:
+    st.markdown('<div class="step-card"><b>2. Watch the agent</b><br><span style="font-size:0.85rem; color:#94a3b8;">Autonomous graph traversal & proof generation</span></div>', unsafe_allow_html=True)
+with c3:
+    st.markdown('<div class="step-card"><b>3. Read and fix findings</b><br><span style="font-size:0.85rem; color:#94a3b8;">Verified multi-hop paths & 1-click patch proof</span></div>', unsafe_allow_html=True)
 
+st.markdown('<div style="height: 12px;"></div>', unsafe_allow_html=True)
 
-st.set_page_config(page_title='Audit-Chain | Autonomous Graph Security Agent', layout='wide', page_icon='🛡️')
+# Action Buttons: 3 Big Example buttons + 1 Upload Option
+btn_col1, btn_col2, btn_col3, btn_col4 = st.columns([1.2, 1.2, 1.2, 1.4])
 
-st.title('🛡️ Audit-Chain: Autonomous Graph Security Agent')
-st.caption('Multi-Hop Attacker Reachability Prover, Verifier Gate & Automated Remediation Patcher powered by FalkorDB & MCP')
+chosen_code = None
+chosen_name = None
+trigger_run = False
 
-st.sidebar.header('Audit Configuration')
-mode_choice = st.sidebar.radio('Execution Mode', ['offline', 'agent'], help='Offline deterministic baseline or autonomous MCP-driven LLM agent')
+with btn_col1:
+    if st.button('⚡ Try reentrancy (m3)', use_container_width=True, type='secondary'):
+        fpath = Path('samples/variants/m3.sol')
+        if fpath.exists():
+            chosen_code = fpath.read_text(encoding='utf-8')
+            chosen_name = 'm3'
+            trigger_run = True
 
-sample_type = st.sidebar.selectbox('Target Selection', ['Variant (samples/variants)', 'Held-out (samples/heldout)', 'Custom Upload'])
+with btn_col2:
+    if st.button('⚡ Try access-control (m2)', use_container_width=True, type='secondary'):
+        fpath = Path('samples/variants/m2.sol')
+        if fpath.exists():
+            chosen_code = fpath.read_text(encoding='utf-8')
+            chosen_name = 'm2'
+            trigger_run = True
 
-sol_source = None
-target_name = 'custom'
+with btn_col3:
+    if st.button('🛡️ Try safe contract (clean)', use_container_width=True, type='secondary'):
+        fpath = Path('samples/variants/clean.sol')
+        if fpath.exists():
+            chosen_code = fpath.read_text(encoding='utf-8')
+            chosen_name = 'clean'
+            trigger_run = True
 
-if sample_type == 'Variant (samples/variants)':
-    variant_options = ['clean', 'm1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7']
-    chosen_var = st.sidebar.selectbox('Choose Variant', variant_options, index=7)
-    target_name = chosen_var
-    sol_file = Path(f'samples/variants/{chosen_var}.sol')
-    if sol_file.exists():
-        sol_source = sol_file.read_text(encoding='utf-8')
-elif sample_type == 'Held-out (samples/heldout)':
-    held_options = ['h1', 'h2', 'h3', 'h4']
-    chosen_held = st.sidebar.selectbox('Choose Held-out Contract', held_options, index=0)
-    target_name = chosen_held
-    sol_file = Path(f'samples/heldout/{chosen_held}.sol')
-    if sol_file.exists():
-        sol_source = sol_file.read_text(encoding='utf-8')
-else:
-    uploaded = st.sidebar.file_uploader('Upload Solidity File (.sol)', type=['sol'])
-    if uploaded:
-        sol_source = uploaded.getvalue().decode('utf-8')
-        target_name = Path(uploaded.name).stem
-
-run_btn = st.sidebar.button('🚀 Run Audit Pipeline', type='primary')
-
-if 'report' not in st.session_state:
-    st.session_state['report'] = None
-if 'current_source' not in st.session_state:
-    st.session_state['current_source'] = ''
-if 'current_project' not in st.session_state:
-    st.session_state['current_project'] = ''
-
-if run_btn and sol_source:
-    with st.spinner('Ingesting contract into FalkorDB call-graph & running multi-hop analysis...'):
-        tmp_run_path = Path(f'tmp_run_{target_name}.sol')
-        tmp_run_path.write_text(sol_source, encoding='utf-8')
+with btn_col4:
+    uploaded_file = st.file_uploader('Or upload your own (.sol)', type=['sol'], label_visibility='collapsed', help='Solidity 0.8.19 single-file contract, max 20 KB')
+    if uploaded_file is not None:
         try:
-            ingest(str(tmp_run_path), target_name)
-            g = get_graph(f'audit_{target_name}')
-            if mode_choice == 'offline':
-                rep = run_offline(g, target_name)
-            else:
-                rep = run_agent(f'audit_{target_name}', target_name)
-            st.session_state['report'] = rep
-            st.session_state['current_source'] = sol_source
-            st.session_state['current_project'] = target_name
-            st.sidebar.success(f'Audit finished! Mode: {rep.mode}')
-        finally:
-            if tmp_run_path.exists():
-                tmp_run_path.unlink()
+            chosen_code = uploaded_file.getvalue().decode('utf-8')
+            chosen_name = Path(uploaded_file.name).stem
+            trigger_run = True
+        except Exception as e:
+            st.error(f'Could not read file: {e}')
 
-tabs = st.tabs(['📋 Findings', '🕸️ Reachability Graph', '🩹 Remediation Patch & Proof', '📊 Evaluation Scoreboard'])
+# Advanced Expander (Collapsed by default)
+with st.expander('⚙️ Advanced Settings', expanded=False):
+    adv_col1, adv_col2 = st.columns(2)
+    with adv_col1:
+        mode_choice = st.selectbox('Agent Mode', ['guided', 'agent', 'offline'], index=0, help='guided: MCP summary with directed reachability probes; agent: open-ended tool discovery; offline: pure deterministic graph queries.')
+    with adv_col2:
+        model_name = os.getenv('AGENT_MODEL', 'qwen/qwen3.8-27b')
+        st.text_input('Configured LLM Model', value=model_name, disabled=True, help='Configure AGENT_MODEL in .env')
 
-with tabs[0]:
-    st.subheader('Verified Security Findings')
-    report = st.session_state.get('report')
-    if report:
-        st.markdown(f'**Project**: `{report.project}` | **Attack Surface Score**: `{report.attack_surface}` | **Mode**: `{report.mode}`')
-        if report.findings:
-            table_data = []
-            for f in report.findings:
-                table_data.append({
-                    'Class': f.klass,
-                    'Severity': f.severity,
-                    'Function': f.function_id,
-                    'Reachable': '✅ Yes' if f.reachable else '❌ No',
-                    'Path Length': len(f.path),
-                    'Fix Target': f.sink if f.sink else 'Control Flow',
-                })
-            st.dataframe(table_data, use_container_width=True)
+# ----------------- 2. PROGRESS & AUDIT EXECUTION -----------------
+if trigger_run and chosen_code:
+    # Visitor rate limiter: max 5 audits per hour
+    now = time.time()
+    st.session_state['audit_timestamps'] = [t for t in st.session_state['audit_timestamps'] if now - t < 3600]
+    
+    cache_key = f"{compute_file_hash(chosen_code)}_{mode_choice}"
+    is_cached = cache_key in st.session_state['cached_audits']
 
-            for idx, f in enumerate(report.findings):
-                with st.expander(f'[{f.klass}] {f.title} - {f.function_id} ({f.severity})'):
-                    st.write(f'**Explanation**: {f.explanation}')
-                    st.write(f'**Recommended Fix**: {f.recommended_fix}')
-                    st.code(' -> '.join(f.path) if f.path else 'Unreachable', language='text')
+    if not is_cached and len(st.session_state['audit_timestamps']) >= 5:
+        st.warning('⏱️ Public demo limit reached: You have run 5 audits in the last hour. Please wait a bit or test with already cached examples.')
+    else:
+        if not is_cached:
+            st.session_state['audit_timestamps'].append(now)
+
+        st.session_state['active_target'] = chosen_name
+
+        if is_cached:
+            st.session_state['audit_data'] = st.session_state['cached_audits'][cache_key]
+            st.toast(f'Loaded cached audit for {chosen_name}!', icon='⚡')
         else:
-            st.success('✅ Zero eligible findings detected. The contract call-graph is safe.')
+            status_box = st.status('Starting audit pipeline...', expanded=True)
+            try:
+                audit_result = run_audit_pipeline(
+                    source_code=chosen_code,
+                    project_name=chosen_name,
+                    mode=mode_choice,
+                    status_placeholder=status_box,
+                )
+                st.session_state['audit_data'] = audit_result
+                st.session_state['cached_audits'][cache_key] = audit_result
+                st.session_state['patch_results'] = {}
+            except Exception as err:
+                status_box.update(label='Audit encountered an issue', state='error')
+                st.error(f'⚠️ {err}')
+                st.info('👉 Quick fix: Verify that FalkorDB is running (`docker compose up -d`) and the contract pragma is 0.8.19.')
 
-        if report.rejected:
-            with st.expander('🛡️ Verifier Gate: Rejected Unverified Findings', expanded=False):
-                st.write('The following potential findings were blocked by the verifier gate (no graph path / invalid edge):')
-                st.json(report.rejected)
-    else:
-        st.info('Select a contract variant in the sidebar and click "Run Audit Pipeline" to analyze.')
+# ----------------- 3. RESULTS DISPLAY -----------------
+audit_data = st.session_state.get('audit_data')
 
-with tabs[1]:
-    st.subheader('Multi-Hop Attacker Reachability Visualization')
-    report = st.session_state.get('report')
-    if report and report.findings:
-        finding_opts = [f'{f.klass}: {f.function_id}' for f in report.findings]
-        selected_idx = st.selectbox('Select Finding to Inspect Call Path', range(len(finding_opts)), format_func=lambda i: finding_opts[i])
-        selected_f = report.findings[selected_idx]
+if audit_data:
+    rep = audit_data['report']
+    traces = audit_data.get('traces', [])
+    elapsed_time = audit_data.get('elapsed', 0.0)
 
-        dot_str = path_to_dot(selected_f.path, selected_f.sink)
-        st.graphviz_chart(dot_str)
+    if audit_data.get('fallback_note'):
+        st.warning(f"ℹ️ {audit_data['fallback_note']}")
 
-        with st.expander('Formal Cypher Proof'):
-            st.code(selected_f.evidence_cypher or 'MATCH p=(e:Function {is_entry:true, guarded:false})-[:CALLS*1..6]->(t) RETURN p', language='cypher')
-    else:
-        st.info('Run an audit with detected findings to view call-graph reachability paths.')
+    st.markdown('---')
 
-with tabs[2]:
-    st.subheader('Autonomous Patch Generation & Proof-of-Removal')
-    report = st.session_state.get('report')
-    if report and report.findings:
-        finding_opts = [f'{f.klass}: {f.function_id}' for f in report.findings]
-        patch_sel = st.selectbox('Select Finding to Patch', range(len(finding_opts)), format_func=lambda i: finding_opts[i], key='patch_sel')
-        target_f = report.findings[patch_sel]
+    # Top Metric Summary Cards
+    m1, m2, m3, m4 = st.columns(4)
+    with m1:
+        st.markdown(f'<div class="metric-card"><div class="metric-value">{rep.attack_surface}</div><div class="metric-label">Attack Surface Score</div></div>', unsafe_allow_html=True)
+    with m2:
+        st.markdown(f'<div class="metric-card"><div class="metric-value">{len(rep.findings)}</div><div class="metric-label">Reported Findings</div></div>', unsafe_allow_html=True)
+    with m3:
+        reachable_count = sum(1 for f in rep.findings if f.reachable)
+        st.markdown(f'<div class="metric-card"><div class="metric-value" style="color:#22c55e;">{reachable_count}</div><div class="metric-label">Verified Paths</div></div>', unsafe_allow_html=True)
+    with m4:
+        rejected_count = len(rep.rejected)
+        st.markdown(f'<div class="metric-card"><div class="metric-value" style="color:{"#ef4444" if rejected_count else "#94a3b8"};">{rejected_count}</div><div class="metric-label">Rejected Claims</div></div>', unsafe_allow_html=True)
 
-        if st.button('🩹 Propose and Verify Patch', type='primary'):
-            with st.spinner('Generating patch and proving attack-surface reduction in FalkorDB...'):
-                tmp_patch_file = Path('temp_source_patch.sol')
-                tmp_patch_file.write_text(st.session_state['current_source'], encoding='utf-8')
-                try:
-                    patch_res = patch_with_retries(st.session_state['current_project'], str(tmp_patch_file), target_f, max_attempts=3, use_oracle=False)
-                    if patch_res.get('success'):
-                        st.success(f'✅ Patch Proved Successful! Attack surface reduced from {patch_res["score_before"]} to {patch_res["score_after"]}.')
-                    else:
-                        st.warning(f'Patch verification: target_gone={patch_res.get("target_gone")}, signatures_preserved={patch_res.get("signatures_preserved")}')
+    st.markdown('<div style="height: 16px;"></div>', unsafe_allow_html=True)
 
-                    col1, col2, col3, col4 = st.columns(4)
-                    col1.metric('Compiled', '✅' if patch_res.get('compiled') else '❌')
-                    col2.metric('Target Gone', '✅' if patch_res.get('target_gone') else '❌')
-                    col3.metric('Signatures Preserved', '✅' if patch_res.get('signatures_preserved') else '❌')
-                    col4.metric('Score Delta', f'{patch_res.get("score_before")} -> {patch_res.get("score_after")}')
+    tab_findings, tab_scoreboard, tab_glossary = st.tabs(['🔍 Findings & Remediation', '📊 How well does it work?', '📖 Security Glossary'])
 
-                    orig_lines = st.session_state['current_source'].splitlines(keepends=True)
-                    patched_lines = patch_res.get('patched_source', '').splitlines(keepends=True)
-                    diff = list(difflib.unified_diff(orig_lines, patched_lines, fromfile='Original.sol', tofile='Patched.sol'))
-                    st.write('**Unified Diff**:')
-                    st.code(''.join(diff) if diff else 'No text changes', language='diff')
-                finally:
-                    if tmp_patch_file.exists():
-                        tmp_patch_file.unlink()
-    else:
-        st.info('Run an audit to generate and prove security patches.')
+    with tab_findings:
+        if not rep.findings:
+            st.success('🎉 Zero attacker-reachable vulnerabilities found! All entry points and state updates are properly protected.')
+        else:
+            left_col, right_col = st.columns([1.1, 1.1])
 
-with tabs[3]:
-    st.subheader('Autonomous Red-Team / Blue-Team Scoreboard')
-    sb_file = Path('reports/scoreboard.md')
-    if sb_file.exists():
-        st.markdown(sb_file.read_text(encoding='utf-8'))
-    else:
-        st.info('Scoreboard records will appear here as evaluation rounds complete.')
+            # Left Column: Findings List
+            with left_col:
+                st.subheader('Verified Vulnerabilities')
+                for idx, f in enumerate(rep.findings):
+                    class_name = CLASS_LABELS.get(f.klass, f.klass)
+                    sev_color = SEVERITY_COLORS.get(f.severity, '#3b82f6')
+
+                    expander_label = f"[{f.klass}] {class_name}: {f.function_id}"
+                    with st.expander(expander_label, expanded=(idx == 0)):
+                        st.markdown(f"<span style='background-color:{sev_color}; color:white; padding:2px 8px; border-radius:4px; font-size:0.8rem; font-weight:600;'>{f.severity.upper()}</span> &nbsp; <b>Function:</b> <code>{f.function_id}</code>", unsafe_allow_html=True)
+                        st.markdown('<div style="height: 6px;"></div>', unsafe_allow_html=True)
+
+                        st.markdown('**1. What is wrong:**')
+                        st.write(f.explanation)
+
+                        st.markdown('**2. How an attacker reaches it:**')
+                        if f.reachable and f.path:
+                            for step_idx, step_fn in enumerate(f.path, 1):
+                                role_tag = ' *(Attacker callable entry)*' if step_idx == 1 else ''
+                                st.markdown(f"{step_idx}. ` {step_fn} `{role_tag}")
+                            if f.sink:
+                                st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;↳ **Mutates privileged state:** ` {f.sink} `")
+                        else:
+                            st.write('No callable path from an unauthenticated entry point.')
+
+                        st.markdown('**3. How to fix:**')
+                        st.info(f.recommended_fix)
+
+                        # Technical details expander
+                        with st.expander('Technical Details (Cypher Evidence)', expanded=False):
+                            st.code(f.evidence_cypher or 'MATCH p=(e:Function)-[:CALLS*]->(t) RETURN p', language='cypher')
+
+                        # Fix and prove button
+                        fix_key = f"fix_{idx}_{f.finding_id}"
+                        if st.button('🩹 Fix this finding', key=fix_key, type='primary'):
+                            with st.spinner('Synthesizing minimal patch and executing proof-of-removal in FalkorDB...'):
+                                patch_tmp = Path(f'patch_source_{int(time.time())}.sol')
+                                patch_tmp.write_text(audit_data['source'], encoding='utf-8')
+                                try:
+                                    res = patch_with_retries(audit_data['project'], str(patch_tmp), f, max_attempts=3, use_oracle=False)
+                                    st.session_state['patch_results'][f.finding_id] = res
+                                finally:
+                                    if patch_tmp.exists():
+                                        patch_tmp.unlink()
+
+                        # Show Patch results if available
+                        if f.finding_id in st.session_state['patch_results']:
+                            p_res = st.session_state['patch_results'][f.finding_id]
+                            st.markdown('---')
+                            if p_res.get('success'):
+                                st.success(f"✅ Patch Proved Successful! Attack surface dropped: {p_res['score_before']} ➔ {p_res['score_after']}")
+                            else:
+                                st.warning('⚠️ Patch did not completely remove the vulnerability or broke contract signatures.')
+
+                            # Diff display
+                            orig_lines = audit_data['source'].splitlines(keepends=True)
+                            patched_lines = p_res.get('patched_source', '').splitlines(keepends=True)
+                            diff = list(difflib.unified_diff(orig_lines, patched_lines, fromfile='Original.sol', tofile='Patched.sol'))
+                            if diff:
+                                st.markdown('**Patch Diff:**')
+                                st.code(''.join(diff), language='diff')
+
+            # Right Column: Path Graph of First Finding & Timeline
+            with right_col:
+                st.subheader('Attacker Call Path')
+                first_finding = rep.findings[0]
+                dot_content = path_to_dot(first_finding.path, first_finding.sink)
+                st.graphviz_chart(dot_content, use_container_width=True)
+
+                st.markdown('---')
+                st.subheader('⏱️ What the agent did')
+                if traces:
+                    timeline_lines = []
+                    for t in traces:
+                        t_name = t.get('name', 'tool')
+                        t_in = json.dumps(t.get('input', {}))
+                        out_raw = str(t.get('output', ''))[:80] + ('...' if len(str(t.get('output', ''))) > 80 else '')
+                        st.markdown(f"- **`{t_name}`**: Input `{t_in}` ➔ *{out_raw}*")
+                else:
+                    st.write('Graph queries evaluated directly via deterministic offline engine.')
+
+                with st.expander('🛡️ Why you can trust this report', expanded=False):
+                    st.markdown('''
+Every finding in this report has undergone rigorous mathematical verification against the FalkorDB code graph.
+1. The entry function must be confirmed as public or external with no access control modifier.
+2. Every consecutive call must be backed by an active, directed `CALLS` edge in the graph AST.
+3. The claim must be proven to reach the sink without relying on ungrounded model outputs.
+''')
+                    if rep.rejected:
+                        st.write('**Rejected unverified claims:**')
+                        for rej in rep.rejected:
+                            st.markdown(f"- `{rej.get('finding_id')}` rejected: `{rej.get('reason')}`")
+
+        # Download Report Section
+        st.markdown('---')
+        d_col1, d_col2 = st.columns(2)
+        with d_col1:
+            json_report = rep.model_dump_json(indent=2)
+            st.download_button('📥 Download Report (JSON)', data=json_report, file_name=f'audit_{rep.project}.json', mime='application/json', use_container_width=True)
+        with d_col2:
+            md_report = generate_markdown_report(audit_data)
+            st.download_button('📥 Download Report (Markdown)', data=md_report, file_name=f'audit_{rep.project}.md', mime='text/markdown', use_container_width=True)
+
+    with tab_scoreboard:
+        st.subheader('📊 Benchmark Results & Verifier Performance')
+        st.caption('Results come from a small set of generated and hand-written contracts tested across rounds.')
+        sb_path = Path('reports/scoreboard.md')
+        if sb_path.exists():
+            st.markdown(sb_path.read_text(encoding='utf-8'))
+        else:
+            st.info('Scoreboard records not yet generated. Run `python -m src.evaluate --round 0` to populate.')
+
+    with tab_glossary:
+        st.subheader('📖 Smart Contract Security Glossary')
+        st.markdown('''
+**Reentrancy (R)**  
+When an external call hands execution flow to an untrusted contract before internal balances or flags are updated. The recipient can recursively re-invoke the withdrawal function to drain contract funds.
+
+**Access Control & Privileged Writes (P)**  
+Functions that modify critical state variables (e.g. `owner`, `admin`) without requiring authorization checks like `onlyOwner`. Any external account can call these to take over contract ownership.
+
+**Call Path**  
+The exact, multi-hop sequence of function dispatches leading from an unauthenticated user transaction into a vulnerable sink. Proving this path confirms that a vulnerability is exploitable.
+
+**Attack Surface Score**  
+A weighted metric measuring reachable privileged write paths, unauthenticated low-level calls, and unguarded state mutations. A lower score signifies a safer contract.
+''')
+
+else:
+    # Initial empty state prompt
+    st.info('👆 Click one of the example buttons above or upload your own `.sol` file to begin an automated graph security audit.')

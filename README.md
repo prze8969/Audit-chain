@@ -1,4 +1,6 @@
-# 🛡️ Audit-Chain: Autonomous Graph Security Agent
+# 🛡️ Audit-Chain
+
+**Graph-powered smart-contract audits you can trace and prove.**
 
 > **Product in one line**: Upload a Solidity file; an autonomous agent uses MCP tools over a FalkorDB code graph to find attacker-reachable bugs, proves each finding with a formal multi-hop graph path, writes a patch, and mathematically proves the patch removed the path.
 
@@ -112,6 +114,10 @@ python -m src.evaluate --round 1 --mode guided --only m7
 
 # 5. Launch Interactive Web Dashboard
 streamlit run app.py
+
+# Or run directly via Docker:
+docker build -t audit-chain .
+docker run --rm -p 7860:7860 --env-file .env audit-chain
 ```
 
 ---

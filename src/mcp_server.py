@@ -4,7 +4,7 @@ from mcp.server.fastmcp import FastMCP
 from src import tools
 from src.graph import get_graph
 
-mcp = FastMCP('audit-graph')
+mcp = FastMCP('audit-chain')
 
 
 def G():

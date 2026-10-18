@@ -1,4 +1,4 @@
-# Graph-Audit Agent: Plan
+# Audit-Chain: Plan
 
 ## Checkpoint Progress
 - [x] CP1.1: Database up and verified

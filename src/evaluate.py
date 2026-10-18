@@ -188,7 +188,7 @@ def run_evaluation(
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Evaluate Graph-Audit agent and harness')
+    parser = argparse.ArgumentParser(description='Evaluate Audit-Chain agent and harness')
     parser.add_argument('--round', default='0', help='Round number (0, 1, 2, 3)')
     parser.add_argument('--mode', choices=['offline', 'agent', 'guided'], default=None, help='Audit mode')
     parser.add_argument('--patch', choices=['oracle', 'llm'], default=None, help='Patch mode')

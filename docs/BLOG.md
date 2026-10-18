@@ -1,6 +1,6 @@
-# 🛡️ Audit-Chain: Why Smart Contract Findings Need Multi-Hop Graph Paths
+# Audit-Chain: giving a smart-contract auditor a map it can prove.
 
-*Solving the high false-positive rate and unverifiable alerts in smart contract auditing with FalkorDB, MCP, and autonomous verifier gates.*
+*Graph-powered smart-contract audits you can trace and prove.*
 
 ---
 

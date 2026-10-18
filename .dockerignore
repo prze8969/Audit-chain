@@ -1,0 +1,11 @@
+.env
+.env*.local
+.venv/
+__pycache__/
+*.pyc
+.git
+reports/trace_*
+patch_tmp_*
+slither_tmp_*
+temp_source_patch.sol
+tmp_run_*.sol

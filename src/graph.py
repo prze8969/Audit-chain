@@ -5,7 +5,18 @@ from falkordb import FalkorDB
 def get_graph(name: str):
     host = os.getenv('FALKORDB_HOST', 'localhost')
     port = int(os.getenv('FALKORDB_PORT', '6379'))
-    db = FalkorDB(host=host, port=port)
+    username = os.getenv('FALKORDB_USERNAME')
+    password = os.getenv('FALKORDB_PASSWORD')
+    ssl_str = os.getenv('FALKORDB_SSL', 'false').lower()
+    ssl = ssl_str in ('true', '1', 'yes')
+    kwargs = {}
+    if username:
+        kwargs['username'] = username
+    if password:
+        kwargs['password'] = password
+    if ssl:
+        kwargs['ssl'] = True
+    db = FalkorDB(host=host, port=port, **kwargs)
     return db.select_graph(name)
 
 

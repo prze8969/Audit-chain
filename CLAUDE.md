@@ -1,4 +1,4 @@
-# CLAUDE.md: Operating contract for Graph-Audit Agent
+# CLAUDE.md: Operating contract for Audit-Chain
 1. Do not web-search or browse. Everything needed is in this document. Items tagged [VERIFY-LOCAL] are confirmed by running the given local command, never by searching.
 2. Work on exactly one checkpoint (CP) at a time. Run its check, show the output, and stop if it differs from the expected result. Do not start the next CP until the check passes.
 3. Create no file, dependency, feature, rename or abstraction that is not in this document. If something seems missing, stop and ask.
