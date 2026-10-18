@@ -68,6 +68,18 @@ st.markdown('''
         text-transform: uppercase;
         letter-spacing: 0.05em;
     }
+    /* Ensure sidebar remains visibly anchored and judges can see the controls */
+    [data-testid="stSidebar"] {
+        min-width: 320px !important;
+        max-width: 360px !important;
+    }
+    /* Code and graph side-by-side container */
+    .editor-container {
+        border: 1px solid #1e293b;
+        border-radius: 8px;
+        background-color: #0b0f19;
+        overflow: hidden;
+    }
 </style>
 ''', unsafe_allow_html=True)
 
@@ -164,35 +176,55 @@ with st.sidebar:
     st.write(f"🤖 **Model Engine**: {h['model_status']}")
     st.caption('Public Demo Limits: Max 5 audits / hr per session • Max 20 KB')
 
-# ----------------- 1. MAIN AREA HEADER & QUICK ACTIONS -----------------
+# ----------------- 1. LANDING & PRESET SELECTION -----------------
 st.markdown('<div class="main-title">🛡️ Audit-Chain Studio</div>', unsafe_allow_html=True)
 st.markdown('<div style="font-size: 1.15rem; font-weight: 600; color: #38bdf8; margin-bottom: 0.3rem;">Graph-powered smart-contract audits you can trace and prove.</div>', unsafe_allow_html=True)
-st.markdown('<div class="main-sub">Explore the code graph, prove attacker reachability across multi-hop calls, and verify automated security patches in FalkorDB.</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-sub">Select a smart contract below or configure it on the left panel. The agent analyzes the AST code graph, proves attacker reachability, and verifies automated patches in FalkorDB.</div>', unsafe_allow_html=True)
 
-# Quick Launch Bar (3 One-click quick presets)
-st.caption('⚡ Quick presets (or configure details on the left sidebar):')
-btn_col1, btn_col2, btn_col3 = st.columns(3)
+# 3 Step Explainer Cards
+c1, c2, c3 = st.columns(3)
+with c1:
+    st.markdown('<div class="step-card"><b>1. Select or Upload</b><br><span style="font-size:0.85rem; color:#94a3b8;">Pick an attack variant or upload custom .sol</span></div>', unsafe_allow_html=True)
+with c2:
+    st.markdown('<div class="step-card"><b>2. Code Graph Traversal</b><br><span style="font-size:0.85rem; color:#94a3b8;">Agent traces multi-hop calls to privileged sinks</span></div>', unsafe_allow_html=True)
+with c3:
+    st.markdown('<div class="step-card"><b>3. Prove & Remediate</b><br><span style="font-size:0.85rem; color:#94a3b8;">1-click automated patch with proof of removal</span></div>', unsafe_allow_html=True)
+
+st.markdown('<div style="height: 14px;"></div>', unsafe_allow_html=True)
+
+# One-Click Quick Presets Bar
+st.markdown('##### ⚡ Quick Start Presets:')
+btn_col1, btn_col2, btn_col3, btn_col4 = st.columns([1.2, 1.2, 1.2, 1.4])
 with btn_col1:
-    if st.button('⚡ Preset: Privileged Takeover (m7)', use_container_width=True):
+    if st.button('⚡ Takeover: Privileged Owner (m7)', use_container_width=True, help='Overwrites contract ownership through unguarded write'):
         fpath = Path('samples/variants/m7.sol')
         if fpath.exists():
             chosen_code = fpath.read_text(encoding='utf-8')
             chosen_name = 'm7'
             trigger_run = True
 with btn_col2:
-    if st.button('⚡ Preset: Reentrancy Bug (m3)', use_container_width=True):
+    if st.button('⚡ Bug: Reentrancy Attack (m3)', use_container_width=True, help='Drains contract funds through external call before balance update'):
         fpath = Path('samples/variants/m3.sol')
         if fpath.exists():
             chosen_code = fpath.read_text(encoding='utf-8')
             chosen_name = 'm3'
             trigger_run = True
 with btn_col3:
-    if st.button('🛡️ Preset: Clean Secure Contract', use_container_width=True):
+    if st.button('🛡️ Safe: Verified Contract (clean)', use_container_width=True, help='Fully guarded contract with zero reachable vulnerabilities'):
         fpath = Path('samples/variants/clean.sol')
         if fpath.exists():
             chosen_code = fpath.read_text(encoding='utf-8')
             chosen_name = 'clean'
             trigger_run = True
+with btn_col4:
+    up_direct = st.file_uploader('Upload .sol directly', type=['sol'], label_visibility='collapsed', help='Upload Solidity 0.8.19 single-file contract, max 20 KB')
+    if up_direct is not None:
+        try:
+            chosen_code = up_direct.getvalue().decode('utf-8')
+            chosen_name = Path(up_direct.name).stem
+            trigger_run = True
+        except Exception as e:
+            st.error(f'Could not read file: {e}')
 
 # ----------------- 2. PROGRESS & AUDIT EXECUTION -----------------
 if trigger_run and chosen_code:
@@ -376,26 +408,35 @@ Every finding in this report has undergone rigorous mathematical verification ag
             st.download_button('📥 Download Report (Markdown)', data=md_report, file_name=f'audit_{rep.project}.md', mime='text/markdown', use_container_width=True)
 
     with tab_graph:
-        st.subheader(f'🕸️ FalkorDB Code Knowledge Graph: `{rep.project}`')
-        st.caption('Complete directed multi-hop graph of public entries, internal functions, modifier guards, and state-variable writes. (Interactive: drag nodes, zoom, and pan).')
+        st.subheader(f'🕸️ Code Knowledge Graph & Source Inspector: `{rep.project}`')
+        st.caption('Explore contract source code side-by-side with its interactive FalkorDB AST graph, call paths, and state writes.')
         
-        g = get_graph(f'audit_{rep.project}')
-        full_interactive_html = render_interactive_full_graph_html(g, height=480)
-        st.components.v1.html(full_interactive_html, height=510)
+        graph_col, code_col = st.columns([1.25, 0.95])
+        
+        with graph_col:
+            st.markdown('**Interactive FalkorDB Graph Canvas** *(Drag nodes, zoom, pan)*')
+            g = get_graph(f'audit_{rep.project}')
+            full_interactive_html = render_interactive_full_graph_html(g, height=520)
+            st.components.v1.html(full_interactive_html, height=545)
+
+        with code_col:
+            st.markdown(f'**Solidity Source Code** (`{rep.project}.sol`)')
+            st.code(audit_data.get('source', '// No source available'), language='solidity', line_numbers=True)
 
         g_col1, g_col2 = st.columns(2)
         with g_col1:
-            with st.expander('📊 Graph Legend & Node Types', expanded=True):
+            with st.expander('📊 Graph Legend & Node Types', expanded=False):
                 st.markdown('''
-- 🟢 **Green Nodes**: Attacker-callable public/external entry points with no modifier guard.
-- 🔵 **Blue Nodes**: Guarded functions (protected by `onlyOwner` or `msg.sender` condition).
-- ⬛ **Dark Slate Nodes**: Internal helper functions.
-- 🟧 **Orange Nodes**: Privileged state variables (`owner`, `admin`, `balances`).
-- 🔴 **Red Arrows**: Directed `CALLS` edges discovered in contract AST.
+- 🟢 **Green Circles**: Attacker-callable public/external entry points with no modifier guard.
+- 🔵 **Blue Circles**: Guarded functions (protected by `onlyOwner` or `msg.sender` condition).
+- 🟣 **Purple Circles**: Internal functions discovered via contract AST.
+- 🟠 **Orange Circles**: Privileged state variables (`owner`, `admin`, `balances`).
+- 🔷 **Cyan Circles**: Standard state variables.
+- 🔴 **Red Arrows**: Directed `CALLS` edges between functions.
 - 🟠 **Dashed Arrows**: `WRITES` edges mutating persistent storage.
 ''')
         with g_col2:
-            with st.expander('🔍 Live FalkorDB Cypher Console', expanded=True):
+            with st.expander('🔍 Live FalkorDB Cypher Console', expanded=False):
                 cypher_input = st.text_input('Run Cypher Query', value='MATCH (a)-[r]->(b) RETURN a.id, type(r), b.id LIMIT 25')
                 if st.button('Execute Query', key='exec_cypher'):
                     try:
