@@ -7,6 +7,10 @@ from src.agent import run_agent, run_offline
 from src.graph import get_graph
 from src.ingest import ingest
 from src.patch import patch_with_retries
+from src.ui_helpers import (
+    render_interactive_full_graph_html,
+    render_interactive_path_html,
+)
 
 
 def path_to_dot(path: list[str], sink: str = '') -> str:
@@ -101,7 +105,13 @@ if run_btn and sol_source:
             if tmp_run_path.exists():
                 tmp_run_path.unlink()
 
-tabs = st.tabs(['📋 Findings', '🕸️ Reachability Graph', '🩹 Remediation Patch & Proof', '📊 Evaluation Scoreboard'])
+tabs = st.tabs([
+    '📋 Findings',
+    '🕸️ Reachability Graph',
+    '🔮 FalkorDB Code Knowledge Graph',
+    '🩹 Remediation Patch & Proof',
+    '📊 Evaluation Scoreboard',
+])
 
 with tabs[0]:
     st.subheader('Verified Security Findings')
@@ -144,8 +154,8 @@ with tabs[1]:
         selected_idx = st.selectbox('Select Finding to Inspect Call Path', range(len(finding_opts)), format_func=lambda i: finding_opts[i])
         selected_f = report.findings[selected_idx]
 
-        dot_str = path_to_dot(selected_f.path, selected_f.sink)
-        st.graphviz_chart(dot_str)
+        interactive_path = render_interactive_path_html(selected_f.path, selected_f.sink, height=280)
+        st.components.v1.html(interactive_path, height=310)
 
         with st.expander('Formal Cypher Proof'):
             st.code(selected_f.evidence_cypher or 'MATCH p=(e:Function {is_entry:true, guarded:false})-[:CALLS*1..6]->(t) RETURN p', language='cypher')
@@ -153,6 +163,17 @@ with tabs[1]:
         st.info('Run an audit with detected findings to view call-graph reachability paths.')
 
 with tabs[2]:
+    st.subheader('🔮 FalkorDB Code Knowledge Graph')
+    st.caption('Complete directed multi-hop graph of public entries, internal functions, modifier guards, and state-variable writes.')
+    report = st.session_state.get('report')
+    if report:
+        g = get_graph(f'audit_{report.project}')
+        full_browser_html = render_interactive_full_graph_html(g, height=560)
+        st.components.v1.html(full_browser_html, height=585)
+    else:
+        st.info('Run an audit pipeline from the sidebar to explore the interactive FalkorDB code graph.')
+
+with tabs[3]:
     st.subheader('Autonomous Patch Generation & Proof-of-Removal')
     report = st.session_state.get('report')
     if report and report.findings:
@@ -188,7 +209,7 @@ with tabs[2]:
     else:
         st.info('Run an audit to generate and prove security patches.')
 
-with tabs[3]:
+with tabs[4]:
     st.subheader('Autonomous Red-Team / Blue-Team Scoreboard')
     sb_file = Path('reports/scoreboard.md')
     if sb_file.exists():
